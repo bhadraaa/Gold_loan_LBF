@@ -10,6 +10,9 @@ import StaffSummary from "./pages/StaffSummary";
 import GoldRateSettings from "./pages/GoldRateSettings";
 import TermOverLoans from "./pages/TermOverLoans";
 import OwnerActivity from "./pages/OwnerActivity";
+import Splash from "./pages/Splash";
+import SelectRole from "./pages/SelectRole";
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout";
@@ -18,8 +21,10 @@ import Layout from "./components/layout";
 function App() {
   return (
     <Routes>
-      {/* LOGIN */}
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={<Splash />} />
+      <Route path="/select-role" element={<SelectRole />} />
+      <Route path="/login/:role" element={<Login />} />
+
       <Route
         path="/loan/:id"
         element={
@@ -98,8 +103,16 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/owner-activity" element={<OwnerActivity />} />
-
+      <Route
+        path="/owner-activity"
+        element={
+          <ProtectedRoute role="owner">
+            <Layout>
+              <OwnerActivity />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* BOTH ROLES */}
       <Route

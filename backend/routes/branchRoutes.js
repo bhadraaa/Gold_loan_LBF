@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate, authorizeOwner } = require("../middleware/authMiddleware");
-const { createBranch } = require("../controllers/branchController");
+const { createBranch, getAllBranches } = require("../controllers/branchController");
 
-router.post("/create", authenticate, authorizeOwner, createBranch);
+router.get("/branches", getAllBranches);
+
+router.post("/branches/create", createBranch);
 
 module.exports = router;

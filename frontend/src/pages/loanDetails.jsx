@@ -1,31 +1,41 @@
 import { useEffect, useState } from "react";
 import api from "../axiosConfig";
 import { useParams } from "react-router-dom";
+import "../styles/gl.css";
 
 function LoanDetails() {
   const { id } = useParams();
-
   const [loan, setLoan] = useState(null);
-  const [closeAmount, setCloseAmount] = useState("");
-  const [paymentMessage, setPaymentMessage] = useState("");
-  const [extraAmount, setExtraAmount] = useState("");
   const [payments, setPayments] = useState([]);
   const [interestData, setInterestData] = useState(null);
-  const [today, setToday] = useState(new Date());
-  const [renewedLoan, setRenewedLoan] = useState(null); // ✅ NEW STATE
+  const [renewedLoan, setRenewedLoan] = useState(null);
 
-  // ===============================
-  // Fetch Loan + Payments
-  // ===============================
+  // Payment section state
+  const [paymentType, setPaymentType] = useState("installment"); // "installment" | "interest"
+  const [payAmount, setPayAmount] = useState("");
+  const [payMsg, setPayMsg] = useState({ text: "", ok: false });
+
+  // Close loan state
+  const [closeAmount, setCloseAmount] = useState("");
+  const [closeMsg, setCloseMsg] = useState({ text: "", ok: false });
+  const [closeConfirm, setCloseConfirm] = useState(false);
+
+  // Renew state
+  const [renewMsg, setRenewMsg] = useState({ text: "", ok: false });
+  const [renewConfirm, setRenewConfirm] = useState(false);
+
+  // Top-up state
+  const [extraAmount, setExtraAmount] = useState("");
+  const [topupMsg, setTopupMsg] = useState({ text: "", ok: false });
+
   const fetchLoanData = async () => {
     try {
       const res = await api.get(`/api/loans/${id}`);
       setLoan(res.data);
-
-      const paymentRes = await api.get(`/api/loans/${id}/payments`);
-      setPayments(paymentRes.data);
+      const payRes = await api.get(`/api/loans/${id}/payments`);
+      setPayments(payRes.data);
     } catch (err) {
-      console.log("Error fetching loan:", err.response?.data);
+      console.error(err.response?.data);
     }
   };
 
@@ -33,440 +43,738 @@ function LoanDetails() {
     try {
       const res = await api.get(`/api/loans/${id}/interest`);
       setInterestData(res.data);
-    } catch (err) {
-      console.log("Interest fetch error:", err.response?.data);
-    }
+    } catch { }
   };
 
-  // ✅ NEW: Fetch Renewed Loan
   const fetchRenewedLoan = async () => {
     try {
       const res = await api.get(`/api/loans/${id}/renewed-loan`);
       setRenewedLoan(res.data);
-    } catch (err) {
-      console.log("No renewed loan found");
+    } catch {
       setRenewedLoan(null);
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!closeAmount || Number(closeAmount) <= 0) {
-      setPaymentMessage("Enter valid payment amount");
-      return;
-    }
-
-    try {
-      const res = await api.post(`/api/loans/${id}/payment`, {
-        amount_paid: Number(closeAmount)
-      });
-
-      setPaymentMessage(
-        `Payment Added | Interest: ₹${res.data.interestPaid} | Principal: ₹${res.data.principalPaid}`
-      );
-
-      setCloseAmount("");
-      fetchLoanData();
-      fetchInterest();
-    } catch (err) {
-      setPaymentMessage(err.response?.data?.message || "Payment failed");
-    }
-  };
-
-  const handleRenew = async () => {
-    try {
-      const res = await api.post(`/api/loans/${id}/renew`);
-      alert(
-        `Loan Renewed!\nCapitalized Interest: ₹${res.data.capitalizedInterest}\nNew Principal: ₹${res.data.newPrincipal}`
-      );
-      window.location.href = `/loan/${res.data.newLoan.id}`;
-    } catch (err) {
-      alert(err.response?.data?.message || "Renew failed");
-    }
-  };
-
-  const handleTopUp = async () => {
-    if (!extraAmount || Number(extraAmount) <= 0) {
-      alert("Enter valid extra amount");
-      return;
-    }
-
-    try {
-      await api.post(`/api/loans/${id}/topup`, {
-        extra_amount: Number(extraAmount)
-      });
-
-      alert("Top-up added successfully");
-      setExtraAmount("");
-      fetchLoanData();
-      fetchInterest();
-    } catch (err) {
-      alert(err.response?.data?.message || "Top-up failed");
     }
   };
 
   useEffect(() => {
     fetchLoanData();
     fetchInterest();
+    const iv = setInterval(fetchInterest, 60000);
+    return () => clearInterval(iv);
+  }, [id]);
 
-    // ✅ FETCH RENEWED LOAN IF STATUS IS RENEWED
-    if (loan?.status === "renewed") {
-      fetchRenewedLoan();
+  useEffect(() => {
+    if (loan?.status === "renewed") fetchRenewedLoan();
+  }, [loan?.status]);
+
+  // ── Payment (installment or interest) ──
+  const handlePayment = async () => {
+    if (!payAmount || Number(payAmount) <= 0) {
+      setPayMsg({ text: "Enter a valid amount.", ok: false });
+      return;
     }
-
-    const interval = setInterval(() => {
-      setToday(new Date());
+    try {
+      const res = await api.post(`/api/loans/${id}/payment`, {
+        amount_paid: Number(payAmount),
+        payment_type: paymentType,
+      });
+      setPayMsg({
+        text: `Payment recorded — Interest: ₹${res.data.interestPaid} · Principal: ₹${res.data.principalPaid}`,
+        ok: true,
+      });
+      setPayAmount("");
+      fetchLoanData();
       fetchInterest();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [id, loan?.status]); // ✅ Added loan?.status dependency
+    } catch (err) {
+      setPayMsg({ text: err.response?.data?.message || "Payment failed.", ok: false });
+    }
+  };
+
+  // ── Close loan ──
+  const handleClose = async () => {
+    if (!closeAmount || Number(closeAmount) <= 0) {
+      setCloseMsg({ text: "Enter the settlement amount.", ok: false });
+      return;
+    }
+    try {
+      const res = await api.post(`/api/loans/${id}/payment`, {
+        amount_paid: Number(closeAmount),
+        payment_type: "close",
+      });
+      setCloseMsg({
+        text: `Loan closed. Interest: ₹${res.data.interestPaid} · Principal: ₹${res.data.principalPaid}`,
+        ok: true,
+      });
+      setCloseAmount("");
+      setCloseConfirm(false);
+      fetchLoanData();
+      fetchInterest();
+    } catch (err) {
+      setCloseMsg({ text: err.response?.data?.message || "Close failed.", ok: false });
+    }
+  };
+
+  // ── Renew ──
+  const handleRenew = async () => {
+    try {
+      const res = await api.post(`/api/loans/${id}/renew`);
+      window.location.href = `/loan/${res.data.newLoan.id}`;
+    } catch (err) {
+      setRenewMsg({ text: err.response?.data?.message || "Renewal failed.", ok: false });
+    }
+  };
+
+  // ── Top-up ──
+  const handleTopUp = async () => {
+    if (!extraAmount || Number(extraAmount) <= 0) {
+      setTopupMsg({ text: "Enter a valid top-up amount.", ok: false });
+      return;
+    }
+    try {
+      await api.post(`/api/loans/${id}/topup`, { extra_amount: Number(extraAmount) });
+      setTopupMsg({ text: "Top-up added successfully.", ok: true });
+      setExtraAmount("");
+      fetchLoanData();
+      fetchInterest();
+    } catch (err) {
+      setTopupMsg({ text: err.response?.data?.message || "Top-up failed.", ok: false });
+    }
+  };
 
   if (!loan) return (
-    <div className="container mx-auto p-6 max-w-6xl flex items-center justify-center min-h-screen">
-      <div className="text-xl font-semibold text-gray-600">Loading loan details...</div>
+    <div className="gl-loading">
+      <span className="gl-spinner" />
+      Loading loan details…
     </div>
   );
 
-  // ✅ FIXED: 3 Status States
   const isClosed = loan.status === "closed";
   const isRenewed = loan.status === "renewed";
   const isActive = loan.status === "active";
 
   const items = loan.items || [];
-  const totalGoldWeight = items.reduce((sum, item) => sum + parseFloat(item.weight || 0), 0);
+  const totalGoldWeight = items.reduce((s, i) => s + parseFloat(i.weight || 0), 0);
   const isOverdue = interestData?.days > 90;
+  const totalPayable = interestData ? interestData.remainingPrincipal + interestData.interest : 0;
+
+  const badgeClass = isClosed ? "gl-badge-closed" : isRenewed ? "gl-badge-renewed" : "gl-badge-active";
+  const badgeLabel = isClosed ? "Closed" : isRenewed ? "Renewed" : "Active";
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-8">
-      {/* 1️⃣ Header Section - ✅ FIXED STATUS BADGE */}
-      <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-200">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">🏦 Loan Details</h1>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 text-lg">
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-gray-500 block">Loan No:</span>
-            <strong>{loan.loan_number}</strong>
-          </div>
+    <div className="gl-page">
+      <style>{`
+        .action-tabs {
+          display: flex;
+          gap: 0;
+          border: 1px solid var(--border-md);
+          border-radius: var(--radius-sm);
+          overflow: hidden;
+          margin-bottom: 16px;
+        }
+        .action-tab {
+          flex: 1;
+          padding: 10px 8px;
+          font-size: 13px;
+          font-weight: 500;
+          font-family: var(--font);
+          cursor: pointer;
+          border: none;
+          background: var(--bg);
+          color: var(--txt2);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          border-right: 1px solid var(--border-md);
+          transition: background .15s, color .15s;
+        }
+        .action-tab:last-child { border-right: none; }
+        .action-tab.selected-installment { background: #1A3C2B; color: #FFFDF7; }
+        .action-tab.selected-interest    { background: #C8962A; color: #FFFDF7; }
+        .action-tab:hover:not(.selected-installment):not(.selected-interest) {
+          background: var(--surface);
+          color: var(--txt1);
+        }
+        .action-tab svg { opacity: .7; }
+        .action-tab.selected-installment svg,
+        .action-tab.selected-interest svg { opacity: 1; }
+        .action-tab-label { font-size: 11px; }
 
-          {/* ✅ PERFECT 3-STATE BADGE */}
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-gray-500 block">Status:</span>
-            <span className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${isClosed
-              ? 'bg-red-100 text-red-800 border-2 border-red-200'
-              : isRenewed
-                ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-200'
-                : 'bg-green-100 text-green-800 border-2 border-green-200'
-              }`}>
-              {isClosed
-                ? '🔴 Closed'
-                : isRenewed
-                  ? '🟡 Renewed'
-                  : '🟢 Active'}
-            </span>
-          </div>
+        .pay-type-hint {
+          font-size: 12px;
+          color: var(--txt2);
+          background: var(--bg);
+          border: 0.5px solid var(--border);
+          border-radius: var(--radius-xs);
+          padding: 9px 12px;
+          margin-bottom: 12px;
+          line-height: 1.5;
+        }
 
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-gray-500 block">Created:</span>
-            <strong>{new Date(loan.created_at).toLocaleDateString('en-IN')}</strong>
-          </div>
-          <div className="space-y-1">
-            <span className="text-sm font-medium text-gray-500 block">Branch:</span>
-            <strong>{loan.branch || 'BR1'}</strong>
-          </div>
-          {isClosed && loan.closed_on && (
-            <div className="space-y-1">
-              <span className="text-sm font-medium text-gray-500 block">Closed:</span>
-              <strong>{new Date(loan.closed_on).toLocaleDateString('en-IN')}</strong>
+        .action-section {
+          border: 1px solid var(--border);
+          border-radius: var(--radius-sm);
+          overflow: hidden;
+          margin-bottom: 12px;
+        }
+        .action-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 16px;
+          background: var(--bg);
+          border-bottom: 0.5px solid var(--border);
+          cursor: pointer;
+          user-select: none;
+        }
+        .action-section-header-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .action-section-icon {
+          width: 32px; height: 32px;
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .action-section-title { font-size: 13px; font-weight: 600; color: var(--txt1); }
+        .action-section-sub   { font-size: 11px; color: var(--txt2); margin-top: 1px; }
+        .action-section-body  { padding: 16px; background: var(--surface); }
+
+        .section-divider {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 20px 0 16px;
+        }
+        .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+        .section-divider-text {
+          font-size: 10px;
+          font-weight: 500;
+          color: var(--txt3);
+          text-transform: uppercase;
+          letter-spacing: .08em;
+          white-space: nowrap;
+        }
+
+        .confirm-box {
+          background: #FEF3C7;
+          border: 1px solid #FCD34D;
+          border-radius: var(--radius-xs);
+          padding: 12px 14px;
+          margin-top: 10px;
+          font-size: 13px;
+          color: #7A4E0D;
+        }
+        .confirm-box strong { display: block; margin-bottom: 8px; font-size: 13px; }
+        .confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+        .renew-confirm-box {
+          background: #FEF3C7;
+          border: 1px solid #FCD34D;
+          border-radius: var(--radius-xs);
+          padding: 14px;
+          margin-top: 12px;
+          font-size: 13px;
+          color: #7A4E0D;
+        }
+
+        @media (max-width: 600px) {
+          .action-tab-label { display: none; }
+          .action-tab { padding: 10px 4px; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+
+        {/* ── Header ── */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: "var(--txt1)", letterSpacing: "-.02em" }}>
+              Loan details
             </div>
-          )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--txt2)", background: "var(--bg)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "2px 8px" }}>
+                {loan.loan_number}
+              </span>
+              <span className={`gl-badge ${badgeClass}`}>{badgeLabel}</span>
+              {isOverdue && isActive && (
+                <span className="gl-badge" style={{ background: "var(--warn-lt)", color: "var(--warn-dk)" }}>Overdue</span>
+              )}
+            </div>
+          </div>
+          <button className="gl-btn gl-btn-ghost gl-btn-sm no-print" onClick={() => window.print()}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 5V2h8v3" stroke="currentColor" strokeWidth="1.2" />
+              <rect x="1" y="5" width="12" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M3 9h8M3 11h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            Print receipt
+          </button>
         </div>
 
-        {/* ✅ RENEWED LOAN LINK */}
+        {/* Banners */}
         {isRenewed && renewedLoan && (
-          <div className="mt-8 p-6 bg-yellow-50 border-2 border-yellow-300 rounded-2xl shadow-lg">
-            <div className="text-xl font-bold text-yellow-800 mb-3">
-              🔄 This loan has been renewed
+          <div className="gl-alert gl-alert-warn" style={{ marginBottom: 16 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginTop: 1, flexShrink: 0 }}>
+              <path d="M3 8a5 5 0 1 0 8.7-3.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M11.5 3L12.5 5.5 10 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div>
+              This loan has been renewed. &nbsp;
+              <a href={`/loan/${renewedLoan.id}`} style={{ fontWeight: 500, color: "var(--warn-dk)", textDecoration: "underline" }}>
+                View new loan #{renewedLoan.loan_number}
+              </a>
             </div>
-            <a
-              href={`/loan/${renewedLoan.id}`}  // ← Uses renewedLoan.id
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-bold text-lg rounded-xl hover:bg-blue-700 transition-all shadow-lg"
-            >
-              👉 View New Loan: <span className="ml-2 font-mono">#{renewedLoan.loan_number}</span>
-            </a>
           </div>
         )}
 
-      </div>
-
-      {/* 2️⃣ Customer + 3️⃣ Gold */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">👤 Customer Information</h2>
-          <div className="space-y-4 text-lg">
-            <div><strong>Name:</strong> {loan.customer_name}</div>
-            <div><strong>Phone:</strong> {loan.phone}</div>
-            <div className="text-gray-700"><strong>Address:</strong> {loan.address}</div>
+        {isClosed && (
+          <div className="gl-alert gl-alert-error" style={{ marginBottom: 16 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginTop: 1, flexShrink: 0 }}>
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <div>
+              <strong>Loan fully settled.</strong> Complete payment received
+              {loan.closed_at && ` on ${new Date(loan.closed_on).toLocaleDateString("en-IN")}`}.
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="bg-white shadow-lg rounded-2xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">💎 Gold Details</h2>
-          <div className="space-y-4">
-            <h3 className="font-bold text-xl mb-4">Gold Items:</h3>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {items.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
-                  <span className="font-semibold text-lg">{item.name}</span>
-                  <span className="text-2xl font-black text-orange-700">{item.weight}g</span>
+        {/* ── Customer + Gold grid ── */}
+        <div className="gl-row-2" style={{ marginBottom: 16 }}>
+          <div className="gl-card">
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Customer</div>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14, paddingBottom: 14, borderBottom: "0.5px solid var(--border)" }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "var(--navy)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 500, color: "#fff", flexShrink: 0 }}>
+                {loan.customer_name?.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--txt1)" }}>{loan.customer_name}</div>
+                <div style={{ fontSize: 12, color: "var(--txt2)" }}>{loan.phone}</div>
+              </div>
+            </div>
+            <div className="gl-gap-8">
+              <div style={{ fontSize: 12, color: "var(--txt2)" }}>Address</div>
+              <div style={{ fontSize: 13, color: "var(--txt1)" }}>{loan.address}</div>
+            </div>
+          </div>
+
+          <div className="gl-card">
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Gold items</div>
+            <div className="gl-gap-8" style={{ marginBottom: 14 }}>
+              {items.map((item, i) => (
+                <div key={i} className="gl-gold-item">
+                  <span className="gl-gold-item-name">{item.name}</span>
+                  <span className="gl-gold-item-weight">{item.weight}g</span>
                 </div>
               ))}
             </div>
-            <div className="p-6 bg-gradient-to-r from-orange-100 to-yellow-100 rounded-2xl border-4 border-orange-300 mt-6">
-              <div className="text-3xl font-black text-center text-orange-800">
-                Total Gold Weight: {totalGoldWeight}g
-              </div>
+            <div style={{ background: "var(--gold-lt)", border: "0.5px solid var(--gold-border)", borderRadius: "var(--radius-xs)", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "var(--gold-dk)" }}>Total weight</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--gold-dk)", fontVariantNumeric: "tabular-nums" }}>{totalGoldWeight.toFixed(2)} g</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 4️⃣ Financial Summary */}
-      <div className={`shadow-2xl rounded-2xl p-10 border-4 ${isOverdue ? 'border-orange-300 bg-gradient-to-br from-orange-50 to-yellow-50' : 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-blue-50'}`}>
-        <h2 className="text-4xl font-black text-center mb-10 tracking-tight">
-          📊 Financial Summary
-        </h2>
-        {interestData ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6 p-8 bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50">
-              <div className="p-6 bg-blue-50 rounded-2xl border-4 border-blue-200 text-center">
-                <div className="text-3xl font-black text-blue-800 mb-1">Base Principal Given</div>
-                <div className="text-4xl font-black text-blue-900">
-                  ₹{Number(loan.loan_amount)?.toLocaleString() || '—'}
+        {/* ── Financial summary ── */}
+        <div className="gl-card" style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>Financial summary</div>
+          {interestData ? (
+            <>
+              <div className={`gl-payable${isOverdue ? " overdue" : ""}`} style={{ marginBottom: 16 }}>
+                <div className="gl-payable-label">Total payable today</div>
+                <div className="gl-payable-amount">₹{totalPayable.toLocaleString("en-IN")}</div>
+                <div className="gl-payable-sub">
+                  Principal ₹{interestData.remainingPrincipal?.toLocaleString("en-IN")} + Interest ₹{interestData.interest?.toLocaleString("en-IN")}
                 </div>
-                {Number(loan.total_principal) > Number(loan.loan_amount) && (
-                  <div className="mt-4 p-3 bg-purple-100 rounded-xl text-purple-900 text-xl font-bold border-2 border-purple-300">
-                    ➕ Top-Ups Added: ₹{(Number(loan.total_principal) - Number(loan.loan_amount)).toLocaleString()}
+              </div>
+              <div className="gl-kpi-grid">
+                <div className="gl-kpi">
+                  <div className="gl-kpi-label">Base amount</div>
+                  <div className="gl-kpi-value">₹{Number(loan.loan_amount).toLocaleString("en-IN")}</div>
+                </div>
+                <div className="gl-kpi">
+                  <div className="gl-kpi-label">Interest rate</div>
+                  <div className="gl-kpi-value">{loan.interest_rate || 12}%</div>
+                  <div style={{ fontSize: 10, color: "var(--txt3)", marginTop: 2 }}>{loan.custom_interest_rate != null ? "Custom" : "Slab-based"}</div>
+                </div>
+                <div className="gl-kpi">
+                  <div className="gl-kpi-label">Days running</div>
+                  <div className="gl-kpi-value" style={{ color: isOverdue ? "var(--err)" : "var(--txt1)" }}>{interestData.days}d</div>
+                </div>
+                <div className="gl-kpi">
+                  <div className="gl-kpi-label">Total paid</div>
+                  <div className="gl-kpi-value" style={{ color: "var(--success)" }}>₹{(loan.total_paid || 0).toLocaleString("en-IN")}</div>
+                </div>
+              </div>
+              {Number(loan.total_principal) > Number(loan.loan_amount) && (
+                <div className="gl-alert gl-alert-info" style={{ marginTop: 12 }}>
+                  Top-up included: <strong>+₹{(Number(loan.total_principal) - Number(loan.loan_amount)).toLocaleString("en-IN")}</strong>
+                  &nbsp;· Total principal: <strong>₹{Number(loan.total_principal).toLocaleString("en-IN")}</strong>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="gl-loading" style={{ minHeight: 100 }}>
+              <span className="gl-spinner" /> Calculating interest…
+            </div>
+          )}
+        </div>
+
+        {/* ── Loan info ── */}
+        <div className="gl-card" style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Loan info</div>
+          <div className="gl-detail-table">
+            <div className="gl-row"><span className="gl-row-key">Loan no.</span><span className="gl-row-val" style={{ fontFamily: "var(--mono)", fontSize: 13 }}>{loan.loan_number}</span></div>
+            <div className="gl-row"><span className="gl-row-key">Branch</span><span className="gl-row-val">{loan.branch || "BR1"}</span></div>
+            <div className="gl-row"><span className="gl-row-key">Created</span><span className="gl-row-val">{new Date(loan.created_at).toLocaleDateString("en-IN")}</span></div>
+            <div className="gl-row"><span className="gl-row-key">Loan type</span><span className="gl-row-val">{loan.loan_type === "special" ? "Special" : "Normal"}</span></div>
+            {isClosed && loan.closed_on && (
+              <div className="gl-row"><span className="gl-row-key">Closed on</span><span className="gl-row-val">{new Date(loan.closed_on).toLocaleDateString("en-IN")}</span></div>
+            )}
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════
+            ACTIONS — active loans only
+        ════════════════════════════════════════ */}
+        {isActive && interestData && (
+          <div className="gl-card" style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 20 }}>
+              Actions
+            </div>
+
+            {/* ── SECTION 1: Make a payment ── */}
+            <div className="action-section">
+              <div className="action-section-header" style={{ cursor: "default" }}>
+                <div className="action-section-header-left">
+                  <div className="action-section-icon" style={{ background: "#E6F4EC" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="#1B5235" strokeWidth="1.3" />
+                      <path d="M1 7h14" stroke="#1B5235" strokeWidth="1.3" />
+                      <circle cx="5" cy="10" r="1" fill="#1B5235" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="action-section-title">Make a payment</div>
+                    <div className="action-section-sub">Pay as installment or interest only</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="action-section-body">
+                {/* Payment type tabs */}
+                <div className="action-tabs">
+                  <button
+                    className={`action-tab${paymentType === "installment" ? " selected-installment" : ""}`}
+                    onClick={() => { setPaymentType("installment"); setPayMsg({ text: "", ok: false }); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 8l4 4 8-8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="action-tab-label">Installment</span>
+                  </button>
+                  <button
+                    className={`action-tab${paymentType === "interest" ? " selected-interest" : ""}`}
+                    onClick={() => { setPaymentType("interest"); setPayMsg({ text: "", ok: false }); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="5.5" cy="5.5" r="2" stroke="currentColor" strokeWidth="1.3" />
+                      <circle cx="10.5" cy="10.5" r="2" stroke="currentColor" strokeWidth="1.3" />
+                      <path d="M4 12L12 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                    <span className="action-tab-label">Interest only</span>
+                  </button>
+                </div>
+
+                {/* Hint text */}
+                <div className="pay-type-hint">
+                  {paymentType === "installment"
+                    ? "💳 Installment — amount will be applied to outstanding interest first, then to the principal balance."
+                    : "📊 Interest only — amount covers accrued interest. Principal balance remains unchanged."}
+                </div>
+
+                {payMsg.text && (
+                  <div className={`gl-alert ${payMsg.ok ? "gl-alert-success" : "gl-alert-error"}`} style={{ marginBottom: 12 }}>
+                    {payMsg.text}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="number"
+                    className="gl-input"
+                    placeholder={
+                      paymentType === "interest"
+                        ? `₹${interestData.interest?.toLocaleString("en-IN")} (interest due)`
+                        : "Enter amount"
+                    }
+                    value={payAmount}
+                    onChange={e => setPayAmount(e.target.value)}
+                    style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}
+                  />
+                  <button
+                    className="gl-btn gl-btn-primary"
+                    style={{ flexShrink: 0, background: paymentType === "interest" ? "var(--gold)" : "var(--navy)" }}
+                    onClick={handlePayment}
+                  >
+                    {paymentType === "installment" ? "Pay installment" : "Pay interest"}
+                  </button>
+                </div>
+
+                {/* Quick fill for interest */}
+                {paymentType === "interest" && interestData?.interest > 0 && (
+                  <button
+                    className="gl-btn gl-btn-ghost gl-btn-sm"
+                    style={{ marginTop: 8 }}
+                    onClick={() => setPayAmount(String(interestData.interest))}
+                  >
+                    Fill exact interest amount (₹{interestData.interest?.toLocaleString("en-IN")})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── SECTION 2: Top-up ── */}
+            <div className="action-section">
+              <div className="action-section-header" style={{ cursor: "default" }}>
+                <div className="action-section-header-left">
+                  <div className="action-section-icon" style={{ background: "#EFF6FF" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6" stroke="#1D4ED8" strokeWidth="1.3" />
+                      <path d="M8 5v6M5 8h6" stroke="#1D4ED8" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="action-section-title">Top-up loan</div>
+                    <div className="action-section-sub">Add extra amount to principal</div>
+                  </div>
+                </div>
+              </div>
+              <div className="action-section-body">
+                {topupMsg.text && (
+                  <div className={`gl-alert ${topupMsg.ok ? "gl-alert-success" : "gl-alert-error"}`} style={{ marginBottom: 12 }}>
+                    {topupMsg.text}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="number"
+                    className="gl-input"
+                    placeholder="Top-up amount (₹)"
+                    value={extraAmount}
+                    onChange={e => setExtraAmount(e.target.value)}
+                    style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}
+                  />
+                  <button className="gl-btn gl-btn-outline" style={{ flexShrink: 0 }} onClick={handleTopUp}>
+                    Add top-up
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Divider ── */}
+            <div className="section-divider">
+              <div className="section-divider-line" />
+              <span className="section-divider-text">Loan lifecycle</span>
+              <div className="section-divider-line" />
+            </div>
+
+            {/* ── SECTION 3: Close loan ── */}
+            <div className="action-section" style={{ borderColor: "#FECACA" }}>
+              <div className="action-section-header" style={{ background: "#FEF2F2", borderBottomColor: "#FECACA", cursor: "default" }}>
+                <div className="action-section-header-left">
+                  <div className="action-section-icon" style={{ background: "#FEE2E2" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6" stroke="#991B1B" strokeWidth="1.3" />
+                      <path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#991B1B" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="action-section-title" style={{ color: "var(--err-dk)" }}>Close loan</div>
+                    <div className="action-section-sub">Full settlement — gold will be released</div>
+                  </div>
+                </div>
+                <span className="gl-badge gl-badge-closed">Final</span>
+              </div>
+
+              <div className="action-section-body">
+                {closeMsg.text && (
+                  <div className={`gl-alert ${closeMsg.ok ? "gl-alert-success" : "gl-alert-error"}`} style={{ marginBottom: 12 }}>
+                    {closeMsg.text}
+                  </div>
+                )}
+
+                <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 10 }}>
+                  Enter the full settlement amount to close this loan. Outstanding:&nbsp;
+                  <strong style={{ color: "var(--txt1)", fontVariantNumeric: "tabular-nums" }}>
+                    ₹{totalPayable.toLocaleString("en-IN")}
+                  </strong>
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="number"
+                    className="gl-input"
+                    placeholder={`₹${totalPayable.toLocaleString("en-IN")}`}
+                    value={closeAmount}
+                    onChange={e => { setCloseAmount(e.target.value); setCloseConfirm(false); }}
+                    style={{ flex: 1, fontVariantNumeric: "tabular-nums", borderColor: "#FECACA" }}
+                  />
+                  <button
+                    className="gl-btn"
+                    style={{ flexShrink: 0, background: "#DC2626", color: "#fff" }}
+                    onClick={() => {
+                      if (!closeAmount || Number(closeAmount) <= 0) {
+                        setCloseMsg({ text: "Enter the settlement amount first.", ok: false });
+                        return;
+                      }
+                      setCloseConfirm(true);
+                    }}
+                  >
+                    Close loan
+                  </button>
+                </div>
+
+                {closeConfirm && (
+                  <div className="confirm-box">
+                    <strong>⚠️ Confirm loan closure</strong>
+                    Closing with <strong style={{ fontVariantNumeric: "tabular-nums" }}>₹{Number(closeAmount).toLocaleString("en-IN")}</strong>.
+                    This will mark the loan as fully settled and release the gold. This cannot be undone.
+                    <div className="confirm-actions">
+                      <button className="gl-btn gl-btn-sm" style={{ background: "#DC2626", color: "#fff" }} onClick={handleClose}>
+                        Yes, close loan
+                      </button>
+                      <button className="gl-btn gl-btn-ghost gl-btn-sm" onClick={() => setCloseConfirm(false)}>
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
+            </div>
 
-              <div className="grid grid-cols-3 gap-4 text-xl">
-                <div className="p-5 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl">
-                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">Remaining Principal</div>
-                  <div className="text-3xl font-bold text-gray-900">
-                    ₹{interestData.remainingPrincipal?.toLocaleString()}
+            {/* ── SECTION 4: Renew loan ── */}
+            <div className="action-section" style={{ borderColor: "#FDE68A" }}>
+              <div className="action-section-header" style={{ background: "#FFFBEB", borderBottomColor: "#FDE68A", cursor: "default" }}>
+                <div className="action-section-header-left">
+                  <div className="action-section-icon" style={{ background: "#FEF3C7" }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8a5 5 0 1 0 8.7-3.3" stroke="#92400E" strokeWidth="1.3" strokeLinecap="round" />
+                      <path d="M11.5 3L12.5 5.5 10 5" stroke="#92400E" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="action-section-title" style={{ color: "#92400E" }}>Renew loan</div>
+                    <div className="action-section-sub">Carry forward as a fresh loan, same gold</div>
                   </div>
                 </div>
-                <div className="p-5 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl">
-                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">Interest Rate</div>
-                  <div className="text-3xl font-bold">{loan.interest_rate || 12}%</div>
-                  <div className="text-xs text-gray-500 mt-1 font-semibold">
-                    {loan.custom_interest_rate !== null && loan.custom_interest_rate !== undefined
-                      ? `Custom Interest Applied: ${loan.custom_interest_rate}%`
-                      : "Standard Slab Interest Applied"}
+                <span className="gl-badge gl-badge-renewed">New term</span>
+              </div>
+
+              <div className="action-section-body">
+                {renewMsg.text && (
+                  <div className={`gl-alert ${renewMsg.ok ? "gl-alert-success" : "gl-alert-error"}`} style={{ marginBottom: 12 }}>
+                    {renewMsg.text}
+                  </div>
+                )}
+
+                <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 12 }}>
+                  Renewing will close this loan and create a new one with the remaining principal as the new loan amount. Interest accrued so far must be settled separately.
+                </div>
+
+                <div style={{ background: "var(--warn-lt)", border: "0.5px solid var(--gold-border)", borderRadius: "var(--radius-xs)", padding: "10px 14px", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: "var(--warn-dk)", display: "flex", justifyContent: "space-between" }}>
+                    <span>Remaining principal (new loan amount)</span>
+                    <strong style={{ fontVariantNumeric: "tabular-nums" }}>₹{interestData.remainingPrincipal?.toLocaleString("en-IN")}</strong>
                   </div>
                 </div>
-                <div className="p-5 bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl">
-                  <div className="text-sm font-medium text-gray-600 uppercase tracking-wide">Loan Type</div>
-                  <div className="text-3xl font-bold">{loan.loan_type === 'special' ? '⭐ Special' : 'Normal'}</div>
-                </div>
-              </div>
 
-              <div className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-                <div className="text-lg font-semibold text-gray-700 mb-2">Days Running</div>
-                <div className={`text-4xl font-black ${isOverdue ? 'text-orange-600' : 'text-indigo-700'}`}>
-                  {interestData.days} days
-                </div>
-              </div>
-
-              <div className="p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border-2 border-orange-200">
-                <div className="text-2xl font-bold text-gray-900 mb-2">Interest Till Today</div>
-                <div className="text-4xl font-black text-orange-600">
-                  ₹{interestData.interest?.toLocaleString()}
-                </div>
+                {!renewConfirm ? (
+                  <button
+                    className="gl-btn gl-btn-warn gl-btn-full"
+                    onClick={() => setRenewConfirm(true)}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                      <path d="M3 7.5A4.5 4.5 0 1 0 11.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                      <path d="M11.5 2v2.5H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Renew this loan
+                  </button>
+                ) : (
+                  <div className="renew-confirm-box">
+                    <strong style={{ display: "block", marginBottom: 6 }}>⚠️ Confirm renewal</strong>
+                    A new loan of <strong>₹{interestData.remainingPrincipal?.toLocaleString("en-IN")}</strong> will be created. This loan will be marked as renewed.
+                    <div className="confirm-actions" style={{ marginTop: 10 }}>
+                      <button className="gl-btn gl-btn-sm gl-btn-warn" onClick={handleRenew}>
+                        Yes, renew loan
+                      </button>
+                      <button className="gl-btn gl-btn-ghost gl-btn-sm" onClick={() => setRenewConfirm(false)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="space-y-6 p-8 bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50">
-              <div className={`p-8 rounded-3xl shadow-2xl text-center text-5xl font-black ${isOverdue ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' :
-                'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
-                }`}>
-                Total Payable Today
-                <div className="text-6xl mt-4 leading-tight">
-                  ₹{(interestData.remainingPrincipal + interestData.interest)?.toLocaleString()}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 p-6 bg-gradient-to-b from-gray-50 to-white rounded-2xl border">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600 mb-2">Total Paid</div>
-                  <div className="text-4xl font-black text-emerald-600">
-                    ₹{loan.total_paid?.toLocaleString() || 0}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-600 mb-2">Remaining</div>
-                  <div className={`text-4xl font-black ${isOverdue ? 'text-red-600' : 'text-red-500'}`}>
-                    ₹{(interestData.remainingPrincipal + interestData.interest - (loan.total_paid || 0))?.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-20">
-            <div className="text-6xl animate-spin mb-6">⏳</div>
-            <p className="text-2xl font-semibold text-gray-600">Calculating interest...</p>
           </div>
         )}
-      </div>
 
-      {/* ✅ FIXED: Only show for ACTIVE loans */}
-      {isActive && (
-        <div className="bg-white shadow-2xl rounded-3xl p-10 border-2 border-gray-200">
-          <h2 className="text-3xl font-black text-center mb-10 text-gray-900">💳 Close Loan (Full Settlement)</h2>
-
-          <div className="max-w-2xl mx-auto mb-12 p-8 bg-gradient-to-r from-red-50 to-orange-50 rounded-3xl border-4 border-red-200 shadow-xl">
-            <div className="text-center mb-8">
-              <div className="text-4xl font-black text-red-700 mb-3 tracking-tight">
-                Total Payable Today
-              </div>
-              <div className="text-6xl font-black text-red-600 mb-4">
-                ₹{(interestData?.remainingPrincipal + interestData?.interest)?.toLocaleString()}
-              </div>
-              <div className="text-xl font-semibold text-red-800 bg-red-100 px-6 py-2 rounded-full inline-block">
-                Full amount required to close
-              </div>
-            </div>
-
-            <div className="flex gap-6 items-end">
-              <input
-                type="number"
-                placeholder="Enter Full Settlement Amount"
-                value={closeAmount}
-                onChange={(e) => setCloseAmount(e.target.value)}
-                className="flex-1 p-6 border-4 border-red-300 rounded-2xl text-2xl font-bold focus:ring-8 focus:ring-red-200 focus:border-red-500 text-right"
-              />
-              <button
-                onClick={handlePayment}
-                className="px-16 py-8 bg-gradient-to-r from-red-600 to-red-700 text-white text-2xl font-black rounded-2xl hover:from-red-700 hover:to-red-800 shadow-2xl hover:shadow-3xl transition-all h-20 flex items-center justify-center"
-              >
-                🚫 CLOSE LOAN
-              </button>
-            </div>
+        {/* ── Payment history ── */}
+        <div className="gl-card" style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>
+            Payment history
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto pt-8 border-t-4 border-gray-200">
-            <button
-              onClick={handleRenew}
-              className="p-8 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xl font-bold rounded-2xl hover:from-yellow-600 hover:to-orange-600 shadow-xl hover:shadow-2xl transition-all"
-            >
-              🔄 RENEW LOAN
-            </button>
-            <div className="space-y-3">
-              <label className="text-lg font-semibold block">➕ Extra Amount (Top-Up)</label>
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  placeholder="Enter extra ₹"
-                  value={extraAmount}
-                  onChange={(e) => setExtraAmount(e.target.value)}
-                  className="flex-1 p-4 border-2 border-purple-300 rounded-xl text-lg focus:ring-4 focus:ring-purple-200"
-                />
-                <button
-                  onClick={handleTopUp}
-                  className="px-10 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-lg rounded-xl hover:from-purple-700 hover:to-indigo-700 shadow-xl"
-                >
-                  ADD TOP-UP
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ HIDE FOR RENEWED/CLOSED */}
-      {isClosed && (
-        <div className="bg-gradient-to-r from-red-50 to-pink-50 border-4 border-red-200 rounded-3xl p-16 text-center shadow-2xl">
-          <div className="text-7xl mb-8">🔴</div>
-          <h2 className="text-4xl font-black text-red-800 mb-4">LOAN FULLY CLOSED</h2>
-          <p className="text-2xl text-red-700 font-semibold">Complete settlement received</p>
-        </div>
-      )}
-
-      {/* 6️⃣ Payment History */}
-      <div className="bg-white shadow-2xl rounded-3xl p-10 border-2 border-gray-200">
-        <h2 className="text-3xl font-black text-gray-900 mb-10">🧾 Payment History</h2>
-        <div className="overflow-x-auto rounded-2xl border-4 border-gray-200">
           {payments.length === 0 ? (
-            <div className="text-center py-20 text-gray-500 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-12 border-2 border-dashed border-gray-300">
-              <div className="text-6xl mb-6">📭</div>
-              <p className="text-2xl font-semibold">No payments recorded yet</p>
+            <div style={{ textAlign: "center", padding: "32px 0", color: "var(--txt3)", fontSize: 14 }}>
+              No payments recorded yet.
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-100 to-gray-200">
-                <tr>
-                  <th className="px-8 py-6 text-left text-xl font-black text-gray-800 uppercase tracking-wider">Date</th>
-                  <th className="px-8 py-6 text-left text-xl font-black text-gray-800 uppercase tracking-wider">Total Amount Paid</th>
-                  <th className="px-8 py-6 text-left text-xl font-black text-gray-800 uppercase tracking-wider">Received By</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {payments.map((pay, index) => (
-                  <tr key={index} className="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all">
-                    <td className="px-8 py-8 whitespace-nowrap">
-                      <div className="text-2xl font-black text-gray-900">
-                        {new Date(pay.payment_date).toLocaleDateString('en-IN')}
-                      </div>
-                    </td>
-                    <td className="px-8 py-8 whitespace-nowrap">
-                      <div className="text-4xl font-black text-emerald-600 mb-2">
-                        ₹{pay.amount_paid?.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500 space-x-4">
-                        <span>Interest: ₹{pay.interest_paid}</span>
-                        <span>Principal: ₹{pay.principal_paid}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-8 whitespace-nowrap text-xl font-bold text-gray-800">
-                      {pay.received_by || 'Branch Staff'}
-                    </td>
+            <div className="gl-table-wrap">
+              <table className="gl-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Amount paid</th>
+                    <th>Interest</th>
+                    <th>Principal</th>
+                    <th>Received by</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {payments.map((pay, i) => (
+                    <tr key={i}>
+                      <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {new Date(pay.payment_date).toLocaleDateString("en-IN")}
+                      </td>
+                      <td>
+                        {pay.payment_type === "interest" ? (
+                          <span className="gl-badge gl-badge-gold">Interest</span>
+                        ) : pay.payment_type === "close" ? (
+                          <span className="gl-badge gl-badge-closed">Close</span>
+                        ) : (
+                          <span className="gl-badge gl-badge-active">Installment</span>
+                        )}
+                      </td>
+                      <td style={{ fontWeight: 500, color: "var(--success)", fontVariantNumeric: "tabular-nums" }}>
+                        ₹{pay.amount_paid?.toLocaleString("en-IN")}
+                      </td>
+                      <td style={{ color: "var(--txt2)", fontVariantNumeric: "tabular-nums" }}>₹{pay.interest_paid}</td>
+                      <td style={{ color: "var(--txt2)", fontVariantNumeric: "tabular-nums" }}>₹{pay.principal_paid}</td>
+                      <td style={{ color: "var(--txt2)" }}>{pay.received_by || "Branch Staff"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
+
       </div>
-
-      {paymentMessage && (
-        <div className={`p-8 rounded-3xl text-center text-2xl font-bold shadow-xl ${paymentMessage.includes('Payment Added')
-          ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 border-4 border-emerald-300'
-          : 'bg-gradient-to-r from-red-100 to-pink-100 text-red-800 border-4 border-red-300'
-          }`}>
-          {paymentMessage}
-        </div>
-      )}
-
-      <div className="text-center">
-        <button
-          onClick={() => window.print()}
-          className="px-16 py-8 bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-2xl font-black rounded-3xl shadow-2xl hover:shadow-3xl hover:from-indigo-700 hover:to-purple-800 transition-all transform hover:-translate-y-1"
-        >
-          🧾 PRINT RECEIPT
-        </button>
-      </div>
-
-      {/* Print styles remain same */}
-      <style jsx>{`
-        @media print {
-          body * { visibility: hidden; }
-          #print-area, #print-area * { visibility: visible; }
-          #print-area { 
-            position: absolute; left: 0; top: 0; width: 100%; 
-            box-shadow: none !important; border: 4px solid #000 !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

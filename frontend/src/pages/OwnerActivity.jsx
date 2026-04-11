@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "../styles/gl.css";
 import { Link } from "react-router-dom";
 import api from "../axiosConfig";
 
@@ -11,204 +12,159 @@ function OwnerActivity() {
   const [toDate, setToDate] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
 
-  // Fetch Logs
-  const fetchLogs = async () => {
-    try {
-      const res = await api.get("/api/loans/owner/activity");
-      setLogs(res.data);
-      setFilteredLogs(res.data);
-    } catch (err) {
-      console.log("Error fetching logs:", err.response?.data);
-    }
-  };
-
   useEffect(() => {
-    fetchLogs();
+    api.get("/api/loans/owner/activity")
+      .then(res => { setLogs(res.data); setFilteredLogs(res.data); })
+      .catch(err => console.error("Activity fetch error:", err));
   }, []);
 
-  // Unique branches for dropdown
-  const uniqueBranches = [...new Set(logs.map(log => log.branch_name))];
+  const uniqueBranches = [...new Set(logs.map(l => l.branch_name).filter(Boolean))];
 
-  // Filtering
   useEffect(() => {
-    let filtered = [...logs];
-
-    if (search) {
-      filtered = filtered.filter(log =>
-        log.loan_number?.toLowerCase().includes(search.toLowerCase()) ||
-        log.staff_name?.toLowerCase().includes(search.toLowerCase()) ||
-        log.action?.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    if (branchFilter) {
-      filtered = filtered.filter(log => log.branch_name === branchFilter);
-    }
-
-    if (fromDate) {
-      filtered = filtered.filter(log =>
-        new Date(log.created_at) >= new Date(fromDate)
-      );
-    }
-
-    if (toDate) {
-      filtered = filtered.filter(log =>
-        new Date(log.created_at) <= new Date(toDate + "T23:59:59")
-      );
-    }
-
-    setFilteredLogs(filtered);
+    let f = [...logs];
+    if (search) f = f.filter(l =>
+      l.loan_number?.toLowerCase().includes(search.toLowerCase()) ||
+      l.name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.action?.toLowerCase().includes(search.toLowerCase())
+    );
+    if (branchFilter) f = f.filter(l => l.branch_name === branchFilter);
+    if (fromDate) f = f.filter(l => new Date(l.created_at) >= new Date(fromDate));
+    if (toDate) f = f.filter(l => new Date(l.created_at) <= new Date(toDate + "T23:59:59"));
+    setFilteredLogs(f);
   }, [search, branchFilter, fromDate, toDate, logs]);
 
-  const clearFilters = () => {
-    setSearch("");
-    setBranchFilter("");
-    setFromDate("");
-    setToDate("");
-  };
+  const clearFilters = () => { setSearch(""); setBranchFilter(""); setFromDate(""); setToDate(""); };
+
+  const hasFilters = search || branchFilter || fromDate || toDate;
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl space-y-8">
+    <div className="gl-page">
+      <div className="gl-page-wide">
 
-      {/* Header */}
-      <div className="bg-white shadow-xl rounded-2xl p-8">
-        <h1 className="text-4xl font-black mb-6">📜 Owner Activity Logs</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-
-          {/* Improved Search */}
-          <div className="col-span-2">
-            <label className="text-sm font-semibold">Search</label>
-            <input
-              type="text"
-              placeholder="Loan No / Staff / Action..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full p-3 border rounded-lg"
-            />
-          </div>
-
-          {/* Branch Dropdown */}
+        {/* ── Header ── */}
+        <div className="gl-header" style={{ marginBottom: 20 }}>
           <div>
-            <label className="text-sm font-semibold">Branch</label>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="w-full p-3 border rounded-lg"
-            >
-              <option value="">All Branches</option>
-              {uniqueBranches.map((branch, i) => (
-                <option key={i} value={branch}>{branch}</option>
-              ))}
-            </select>
+            <div className="gl-title">Activity logs</div>
+            <div className="gl-subtitle">{filteredLogs.length} record{filteredLogs.length !== 1 ? "s" : ""}{hasFilters ? " (filtered)" : ""}</div>
           </div>
-
-          {/* Date Filters */}
-          <div>
-            <label className="text-sm font-semibold">From</label>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full p-3 border rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-semibold">To</label>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full p-3 border rounded-lg"
-            />
-          </div>
-
+          {hasFilters && (
+            <button className="gl-btn gl-btn-ghost gl-btn-sm" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
         </div>
 
-        <div className="mt-4 flex justify-between items-center">
-          <div className="text-lg font-semibold text-gray-600">
-            Total Records: {filteredLogs.length}
-          </div>
+        {/* ── Filters ── */}
+        <div className="gl-card" style={{ marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 12, alignItems: "flex-end" }}>
+            <div className="gl-field">
+              <label className="gl-label">Search</label>
+              <div className="gl-search">
+                <input
+                  placeholder="Loan no, staff name, action…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginRight: 12, color: "var(--txt3)" }}>
+                  <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M10.5 10.5l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </div>
+            </div>
 
-          <button
-            onClick={clearFilters}
-            className="px-5 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-          >
-            Clear Filters
-          </button>
+            <div className="gl-field">
+              <label className="gl-label">Branch</label>
+              <select className="gl-select" value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
+                <option value="">All branches</option>
+                {uniqueBranches.map((b, i) => <option key={i} value={b}>{b}</option>)}
+              </select>
+            </div>
+
+            <div className="gl-field">
+              <label className="gl-label">From</label>
+              <input type="date" className="gl-input" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+            </div>
+
+            <div className="gl-field">
+              <label className="gl-label">To</label>
+              <input type="date" className="gl-input" value={toDate} onChange={e => setToDate(e.target.value)} />
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white shadow-2xl rounded-3xl p-8 border-2 border-gray-200">
-        {filteredLogs.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 text-xl font-semibold">
-            No activity records found.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-left font-bold">Date</th>
-                  <th className="px-6 py-4 text-left font-bold">Staff</th>
-                  <th className="px-6 py-4 text-left font-bold">Branch</th>
-                  <th className="px-6 py-4 text-left font-bold">Action</th>
-                  <th className="px-6 py-4 text-left font-bold">Loan</th>
-                  <th className="px-6 py-4 text-left font-bold">View</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLogs.map((log) => (
-                  <>
-                    <tr key={log.id} className="border-t hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        {new Date(log.created_at).toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-6 py-4 font-semibold">{log.staff_name}</td>
-                      <td className="px-6 py-4">{log.branch_name}</td>
-                      <td className="px-6 py-4">{log.action}</td>
-                      <td className="px-6 py-4">
-                        {log.loan_id ? (
-                          <Link
-                            to={`/loan/${log.loan_id}`}
-                            className="text-blue-600 font-bold hover:underline"
+        {/* ── Table ── */}
+        <div className="gl-card" style={{ padding: 0, overflow: "hidden" }}>
+          {filteredLogs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px 0", color: "var(--txt3)", fontSize: 14 }}>
+              No activity records found.
+            </div>
+          ) : (
+            <div className="gl-table-wrap" style={{ borderRadius: 0, border: "none" }}>
+              <table className="gl-table">
+                <thead>
+                  <tr>
+                    <th>Date & time</th>
+                    <th>Staff</th>
+                    <th>Branch</th>
+                    <th>Action</th>
+                    <th>Loan</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLogs.map(log => (
+                    <>
+                      <tr key={log.id}>
+                        <td style={{ fontVariantNumeric: "tabular-nums", fontSize: 12, color: "var(--txt2)", whiteSpace: "nowrap" }}>
+                          {new Date(log.created_at).toLocaleDateString("en-IN")}&nbsp;
+                          <span style={{ color: "var(--txt3)" }}>
+                            {new Date(log.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 500 }}>{log.name || "—"}</td>
+                        <td style={{ color: "var(--txt2)" }}>{log.branch_name || "—"}</td>
+                        <td style={{ maxWidth: 260, color: "var(--txt1)" }}>{log.action}</td>
+                        <td>
+                          {log.loan_id ? (
+                            <Link
+                              to={`/loan/${log.loan_id}`}
+                              style={{ color: "var(--gold-dk)", fontWeight: 500, fontFamily: "var(--mono)", fontSize: 12 }}
+                            >
+                              {log.loan_number || `#${log.loan_id}`}
+                            </Link>
+                          ) : <span style={{ color: "var(--txt3)" }}>—</span>}
+                        </td>
+                        <td>
+                          <button
+                            className="gl-btn gl-btn-ghost gl-btn-sm"
+                            style={{ padding: "4px 10px", fontSize: 12 }}
+                            onClick={() => setExpandedRow(expandedRow === log.id ? null : log.id)}
                           >
-                            {log.loan_number}
-                          </Link>
-                        ) : "-"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            setExpandedRow(expandedRow === log.id ? null : log.id)
-                          }
-                          className="text-indigo-600 font-semibold"
-                        >
-                          {expandedRow === log.id ? "Hide" : "View"}
-                        </button>
-                      </td>
-                    </tr>
-
-                    {/* Expandable Details */}
-                    {expandedRow === log.id && (
-                      <tr className="bg-gray-50">
-                        <td colSpan="6" className="px-6 py-6 text-sm text-gray-700">
-                          <div className="space-y-2">
-                            <div><strong>Action Details:</strong> {log.action}</div>
-                            <div><strong>Staff:</strong> {log.staff_name}</div>
-                            <div><strong>Branch:</strong> {log.branch_name}</div>
-                          </div>
+                            {expandedRow === log.id ? "Hide" : "Details"}
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+
+                      {expandedRow === log.id && (
+                        <tr key={`${log.id}-exp`}>
+                          <td colSpan="6" style={{ background: "var(--gold-lt)", padding: "14px 16px", borderBottom: "0.5px solid var(--gold-border)" }}>
+                            <div style={{ display: "flex", gap: 32, fontSize: 13, flexWrap: "wrap" }}>
+                              <div><span style={{ color: "var(--txt2)" }}>Action: </span><strong>{log.action}</strong></div>
+                              <div><span style={{ color: "var(--txt2)" }}>Staff: </span><strong>{log.name}</strong></div>
+                              <div><span style={{ color: "var(--txt2)" }}>Branch: </span><strong>{log.branch_name}</strong></div>
+                              <div><span style={{ color: "var(--txt2)" }}>Time: </span><strong>{new Date(log.created_at).toLocaleString("en-IN")}</strong></div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );

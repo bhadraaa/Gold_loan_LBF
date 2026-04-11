@@ -1,150 +1,143 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import "../styles/gl.css";
+import api from "../axiosConfig";
 
 function StaffSummary() {
-  const token = sessionStorage.getItem("token");
-
   const [data, setData] = useState(null);
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [loading, setLoading] = useState(true);
 
   const fetchSummary = async (date) => {
-    const res = await axios.get(
-      `http://localhost:5032/api/loans/staff/date-summary?date=${date}`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    );
-
-    setData(res.data);
+    setLoading(true);
+    try {
+      const res = await api.get(`/api/loans/staff/date-summary?date=${date}`);
+      setData(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchSummary(selectedDate);
   }, []);
 
-  if (!data) return <div className="p-6">Loading...</div>;
+  if (!data && loading) return <div className="gl-loading"><span className="gl-spinner" />Loading summary...</div>;
+  if (!data) return null;
+
+  const kpis = [
+    { label: "Loans created", value: data.totalLoans, color: "var(--txt1)" },
+    { label: "Total collection", value: `₹${Number(data.totalCollection).toLocaleString("en-IN")}`, color: "var(--success)" },
+    { label: "Interest earned", value: `₹${Number(data.totalInterest).toLocaleString("en-IN")}`, color: "var(--txt1)" },
+    { label: "Principal collected", value: `₹${Number(data.totalPrincipal).toLocaleString("en-IN")}`, color: "var(--txt1)" },
+  ];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="gl-page">
+      <div className="gl-page-wide">
 
-      <h2 className="text-2xl font-semibold mb-6">
-        Staff Date Summary
-      </h2>
-
-      {/* DATE SELECTOR */}
-      <div className="mb-6 flex gap-4 items-center">
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="border p-2 rounded-lg"
-        />
-
-        <button
-          onClick={() => fetchSummary(selectedDate)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-        >
-          View
-        </button>
-      </div>
-
-      {/* SUMMARY CARDS */}
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-
-        <div className="bg-white shadow-sm p-6 rounded-xl">
-          <p className="text-sm text-gray-500">Loans Created</p>
-          <p className="text-2xl font-semibold">
-            {data.totalLoans}
-          </p>
+        <div className="gl-header">
+          <div>
+            <div className="gl-title">Daily summary</div>
+            <div className="gl-subtitle">Financial breakdown for selected date</div>
+          </div>
+          <div className="gl-search" style={{ width: 220 }}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                fetchSummary(e.target.value);
+              }}
+              style={{ width: "100%", padding: "8px 12px" }}
+            />
+          </div>
         </div>
 
-        <div className="bg-white shadow-sm p-6 rounded-xl">
-          <p className="text-sm text-gray-500">Total Collection</p>
-          <p className="text-2xl font-semibold text-green-600">
-            ₹ {data.totalCollection}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-sm p-6 rounded-xl">
-          <p className="text-sm text-gray-500">Interest Earned</p>
-          <p className="text-2xl font-semibold">
-            ₹ {data.totalInterest}
-          </p>
-        </div>
-
-        <div className="bg-white shadow-sm p-6 rounded-xl">
-          <p className="text-sm text-gray-500">Principal Collected</p>
-          <p className="text-2xl font-semibold">
-            ₹ {data.totalPrincipal}
-          </p>
-        </div>
-
-      </div>
-
-      {/* LOANS TABLE */}
-      <h3 className="text-lg font-semibold mb-3">
-        Loans Created
-      </h3>
-
-      <div className="overflow-x-auto mb-8">
-        <table className="w-full text-sm border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-2">Loan No</th>
-              <th className="border p-2">Customer</th>
-              <th className="border p-2">Amount</th>
-              <th className="border p-2">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.loans.map((loan) => (
-              <tr key={loan.id}>
-                <td className="border p-2">{loan.loan_number}</td>
-                <td className="border p-2">{loan.customer_name}</td>
-                <td className="border p-2">₹ {loan.loan_amount}</td>
-                <td className="border p-2">
-                  {new Date(loan.created_at).toLocaleTimeString()}
-                </td>
-              </tr>
+        <div className="gl-card" style={{ marginBottom: 24 }}>
+          <div className="gl-section-label">Summary Overview</div>
+          <div className="gl-kpi-grid">
+            {kpis.map(k => (
+              <div className="gl-kpi" key={k.label}>
+                <div className="gl-kpi-label">{k.label}</div>
+                <div className="gl-kpi-value" style={{ color: k.color }}>{k.value}</div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        <div className="gl-row-2" style={{ alignItems: "flex-start" }}>
+          <div className="gl-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px" }}>
+              <div className="gl-section-label" style={{ margin: 0 }}>Loans Created</div>
+            </div>
+            <div className="gl-table-wrap" style={{ border: "none", borderRadius: 0 }}>
+              <table className="gl-table">
+                <thead>
+                  <tr>
+                    <th>Loan No</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.loans.length === 0 ? (
+                    <tr><td colSpan="4" style={{ textAlign: "center", color: "var(--txt3)", padding: 24 }}>No loans created</td></tr>
+                  ) : (
+                    data.loans.map((loan) => (
+                      <tr key={loan.id}>
+                        <td style={{ fontFamily: "var(--mono)", fontWeight: 500 }}>{loan.loan_number}</td>
+                        <td style={{ fontWeight: 500 }}>{loan.customer_name}</td>
+                        <td style={{ fontVariantNumeric: "tabular-nums" }}>₹{Number(loan.loan_amount).toLocaleString("en-IN")}</td>
+                        <td style={{ color: "var(--txt2)" }}>{new Date(loan.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="gl-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px" }}>
+              <div className="gl-section-label" style={{ margin: 0 }}>Payments Received</div>
+            </div>
+            <div className="gl-table-wrap" style={{ border: "none", borderRadius: 0 }}>
+              <table className="gl-table">
+                <thead>
+                  <tr>
+                    <th>Loan No</th>
+                    <th>Amount</th>
+                    <th>Interest / Principal</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.payments.length === 0 ? (
+                    <tr><td colSpan="4" style={{ textAlign: "center", color: "var(--txt3)", padding: 24 }}>No payments received</td></tr>
+                  ) : (
+                    data.payments.map((pay, index) => (
+                      <tr key={index}>
+                        <td style={{ fontFamily: "var(--mono)", fontWeight: 500 }}>{pay.loan_number}</td>
+                        <td style={{ fontVariantNumeric: "tabular-nums", color: "var(--success)", fontWeight: 600 }}>₹{Number(pay.amount_paid).toLocaleString("en-IN")}</td>
+                        <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                            ₹{Number(pay.interest_paid).toLocaleString("en-IN")} / ₹{Number(pay.principal_paid).toLocaleString("en-IN")}
+                        </td>
+                        <td style={{ color: "var(--txt2)" }}>{new Date(pay.payment_date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
-
-      {/* PAYMENTS TABLE */}
-      <h3 className="text-lg font-semibold mb-3">
-        Payments Received
-      </h3>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border p-2">Loan No</th>
-              <th className="border p-2">Amount</th>
-              <th className="border p-2">Interest</th>
-              <th className="border p-2">Principal</th>
-              <th className="border p-2">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.payments.map((pay, index) => (
-              <tr key={index}>
-                <td className="border p-2">{pay.loan_number}</td>
-                <td className="border p-2">₹ {pay.amount_paid}</td>
-                <td className="border p-2">₹ {pay.interest_paid}</td>
-                <td className="border p-2">₹ {pay.principal_paid}</td>
-                <td className="border p-2">
-                  {new Date(pay.payment_date).toLocaleTimeString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
     </div>
   );
 }

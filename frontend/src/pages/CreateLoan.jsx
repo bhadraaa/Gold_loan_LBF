@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import api from "../axiosConfig";
+import "../styles/gl.css";
 
 function CreateLoan() {
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [loanNumber, setLoanNumber] = useState("");
   const [items, setItems] = useState([{ name: "", weight: "" }]);
   const [loanAmount, setLoanAmount] = useState("");
+  const [loanDate, setLoanDate] = useState("");
   const [manualInterestRate, setManualInterestRate] = useState("");
   const [goldRate, setGoldRate] = useState(0);
   const [message, setMessage] = useState("");
@@ -14,249 +17,282 @@ function CreateLoan() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchRate = async () => {
-      try {
-        const res = await api.get("/api/loans/gold-rate");
-
-        if (res.data?.gold_rate) {
-          setGoldRate(Number(res.data.gold_rate));
-        } else {
-          setGoldRate(0);
-        }
-
-      } catch (err) {
-        console.log("Failed to fetch gold rate");
-        setGoldRate(0);
-      }
-    };
-
-    fetchRate();
+    api.get("/api/loans/gold-rate")
+      .then(res => setGoldRate(Number(res.data?.gold_rate) || 0))
+      .catch(() => setGoldRate(0));
   }, []);
 
-
-
-  // 🔹 Handle item changes
   const handleItemChange = (index, field, value) => {
-    const updatedItems = [...items];
-    updatedItems[index][field] = value;
-    setItems(updatedItems);
+    const updated = [...items];
+    updated[index][field] = value;
+    setItems(updated);
   };
 
-  const addItem = () => {
-    setItems([...items, { name: "", weight: "" }]);
-  };
-
+  const addItem = () => setItems([...items, { name: "", weight: "" }]);
   const removeItem = (index) => {
     const updated = items.filter((_, i) => i !== index);
     setItems(updated.length ? updated : [{ name: "", weight: "" }]);
   };
 
-  // 🔹 Calculations
-  const totalWeight = items.reduce(
-    (sum, item) => sum + Number(item.weight || 0),
-    0
-  );
-
+  const totalWeight = items.reduce((s, i) => s + Number(i.weight || 0), 0);
   const eligibleAmount = totalWeight * goldRate;
-  const isSpecialLoan = Number(loanAmount) > 40000;
+  const interestPreview = loanAmount && manualInterestRate
+    ? ((Number(loanAmount) * Number(manualInterestRate)) / 100 / 12).toFixed(2)
+    : null;
 
-  // 🔹 Submit Loan
   const handleSubmit = async () => {
     setMessage("");
     setIsError(false);
 
-    if (!customerName || !phone || !address || !loanAmount) {
-      setMessage("All fields are required");
-      setIsError(true);
-      return;
+    if (!loanNumber.trim()) {
+      setMessage("Loan number is required."); setIsError(true); return;
     }
-
-    if (items.length === 0) {
-      setMessage("Add at least one gold item");
-      setIsError(true);
-      return;
+    if (!customerName || !phone || !address) {
+      setMessage("All customer fields are required."); setIsError(true); return;
     }
-
-    if (items.some(item => !item.name || Number(item.weight) <= 0)) {
-      setMessage("All gold items must have valid name and weight");
-      setIsError(true);
-      return;
+    if (items.some(i => !i.name || Number(i.weight) <= 0)) {
+      setMessage("Each gold item needs a name and valid weight."); setIsError(true); return;
     }
-
-    if (Number(loanAmount) <= 0) {
-      setMessage("Loan amount must be greater than zero");
-      setIsError(true);
-      return;
+    if (!loanAmount || Number(loanAmount) <= 0) {
+      setMessage("Enter a valid loan amount."); setIsError(true); return;
     }
-
     if (manualInterestRate !== "") {
       const rate = Number(manualInterestRate);
       if (rate < 0 || rate >= 60) {
-        setMessage("Interest rate must be >= 0 and < 60");
-        setIsError(true);
-        return;
+        setMessage("Interest rate must be between 0% and 59.99%."); setIsError(true); return;
       }
     }
 
     setLoading(true);
-
     try {
       await api.post("/api/loans/create", {
+        loan_number: loanNumber.trim(),
         customer_name: customerName,
         phone,
         address,
         items,
         loan_amount: Number(loanAmount),
         custom_rate: manualInterestRate !== "" ? Number(manualInterestRate) : null,
+        loan_date: loanDate || null   // 🔥 ADD HERE
       });
-
-      setMessage("Loan Created Successfully!");
+      setMessage("Loan created successfully!");
       setIsError(false);
-
-      // Reset form
-      setCustomerName("");
-      setPhone("");
-      setAddress("");
+      setLoanNumber(""); setCustomerName(""); setPhone(""); setAddress("");
       setItems([{ name: "", weight: "" }]);
-      setLoanAmount("");
-      setManualInterestRate("");
-
+      setLoanAmount(""); setManualInterestRate("");
+      setLoanDate("");
     } catch (err) {
-      setMessage(
-        err.response?.data?.message || "Error creating loan"
-      );
+      setMessage(err.response?.data?.message || "Failed to create loan.");
       setIsError(true);
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="gl-page">
+      <div className="gl-page-inner">
 
-      <h2 className="text-2xl font-semibold mb-6">
-        Gold Loan Registration
-      </h2>
-
-      {message && (
-        <div
-          className={`mb-4 text-sm p-3 rounded-lg ${isError ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"
-            }`}
-        >
-          {message}
-        </div>
-      )}
-
-      {/* Customer Info */}
-      <input
-        placeholder="Customer Name"
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
-        className="w-full mb-4 p-3 border rounded-lg"
-      />
-
-      <input
-        placeholder="Phone Number"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="w-full mb-4 p-3 border rounded-lg"
-      />
-
-      <textarea
-        placeholder="Address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-        className="w-full mb-6 p-3 border rounded-lg"
-      />
-
-      {/* Items Section */}
-      <h3 className="font-medium mb-3">Gold Items</h3>
-
-      {items.map((item, index) => (
-        <div key={index} className="flex gap-2 mb-3">
-          <input
-            placeholder="Item Name"
-            value={item.name}
-            onChange={(e) =>
-              handleItemChange(index, "name", e.target.value)
-            }
-            className="flex-1 p-3 border rounded-lg"
-          />
-
-          <input
-            placeholder="Weight (g)"
-            type="number"
-            min="0"
-            value={item.weight}
-            onChange={(e) =>
-              handleItemChange(index, "weight", e.target.value)
-            }
-            className="w-28 p-3 border rounded-lg"
-          />
-
-          {items.length > 1 && (
-            <button
-              onClick={() => removeItem(index)}
-              className="text-red-500 font-bold"
-            >
-              ✕
-            </button>
+        {/* Header */}
+        <div className="gl-header">
+          <div>
+            <div className="gl-title">New loan</div>
+            <div className="gl-subtitle">Register a gold-backed loan</div>
+          </div>
+          {goldRate > 0 && (
+            <div className="gl-badge gl-badge-gold" style={{ fontSize: 13 }}>
+              ₹{goldRate.toLocaleString("en-IN")}/g
+            </div>
           )}
         </div>
-      ))}
 
-      <button
-        onClick={addItem}
-        className="text-blue-600 text-sm mb-6"
-      >
-        + Add Item
-      </button>
+        {/* Alert */}
+        {message && (
+          <div className={`gl-alert ${isError ? "gl-alert-error" : "gl-alert-success"}`} style={{ marginBottom: 20 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginTop: 1, flexShrink: 0 }}>
+              {isError
+                ? <><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" /><path d="M8 5v3M8 11h.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></>
+                : <><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.3" /><path d="M5.5 8l2 2 3-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></>
+              }
+            </svg>
+            {message}
+          </div>
+        )}
 
-      {/* Calculation Box */}
-      <div className="bg-white shadow-sm p-4 rounded-xl mb-6 space-y-2 border">
-        <p>Total Weight: <strong>{totalWeight.toFixed(2)} g</strong></p>
-        <p>Gold Rate: ₹ {goldRate.toLocaleString("en-IN")} / g</p>
-        <p>
-          Eligible Amount:{" "}
-          <strong>
-            ₹ {eligibleAmount.toLocaleString("en-IN")}
-          </strong>
-        </p>
+        {/* ── Loan Number ── */}
+        <div className="gl-card" style={{ marginBottom: 16 }}>
+          <div className="gl-field">
+            <label className="gl-label">Loan number</label>
+            <input
+              className="gl-input"
+              placeholder="e.g. BR1-LOAN-101"
+              value={loanNumber}
+              onChange={e => setLoanNumber(e.target.value)}
+              style={{ fontFamily: "var(--mono)", fontSize: 14, letterSpacing: ".02em" }}
+            />
+          </div>
+        </div>
+
+        {/* ── Customer ── */}
+        <div className="gl-card gl-gap-16" style={{ marginBottom: 16 }}>
+          <div className="gl-section-label">Customer</div>
+
+          <div className="gl-field">
+            <label className="gl-label">Full name</label>
+            <input className="gl-input" placeholder="Customer name" value={customerName} onChange={e => setCustomerName(e.target.value)} />
+          </div>
+
+          <div className="gl-field">
+            <label className="gl-label">Phone</label>
+            <input className="gl-input" placeholder="Phone number" value={phone} onChange={e => setPhone(e.target.value)} />
+          </div>
+
+          <div className="gl-field">
+            <label className="gl-label">Address</label>
+            <textarea className="gl-textarea" placeholder="Full address" value={address} onChange={e => setAddress(e.target.value)} />
+          </div>
+        </div>
+
+        {/* ── Gold Items ── */}
+        <div className="gl-card gl-gap-12" style={{ marginBottom: 16 }}>
+          <div className="gl-section-label">Gold items</div>
+
+          {items.map((item, index) => (
+            <div key={index} style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div className="gl-field" style={{ flex: 1 }}>
+                {index === 0 && <label className="gl-label">Item</label>}
+                <input
+                  className="gl-input"
+                  placeholder="e.g. Necklace, Ring"
+                  value={item.name}
+                  onChange={e => handleItemChange(index, "name", e.target.value)}
+                />
+              </div>
+              <div className="gl-field" style={{ width: 100 }}>
+                {index === 0 && <label className="gl-label">Weight (g)</label>}
+                <input
+                  className="gl-input"
+                  type="number"
+                  min="0"
+                  placeholder="0.00"
+                  value={item.weight}
+                  onChange={e => handleItemChange(index, "weight", e.target.value)}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                />
+              </div>
+              {items.length > 1 && (
+                <button
+                  onClick={() => removeItem(index)}
+                  style={{
+                    background: "var(--err-lt)", color: "var(--err)",
+                    border: "0.5px solid #FCA5A5",
+                    borderRadius: "var(--radius-xs)",
+                    width: 36, height: 38, flexShrink: 0,
+                    cursor: "pointer", fontSize: 18,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >×</button>
+              )}
+            </div>
+          ))}
+
+          <button
+            onClick={addItem}
+            style={{
+              background: "none", border: "none", color: "var(--gold-dk)",
+              fontSize: 13, fontWeight: 500, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6, padding: 0,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Add item
+          </button>
+
+          {/* Weight / eligible preview */}
+          <div style={{
+            background: "var(--bg)", border: "0.5px solid var(--border)",
+            borderRadius: "var(--radius-sm)", padding: "12px 16px",
+            display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12,
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--txt2)", marginBottom: 2 }}>Total weight</div>
+              <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{totalWeight.toFixed(2)} g</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--txt2)", marginBottom: 2 }}>Gold rate</div>
+              <div style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>₹{goldRate.toLocaleString("en-IN")}/g</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--txt2)", marginBottom: 2 }}>Eligible amount</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--gold-dk)", fontVariantNumeric: "tabular-nums" }}>
+                ₹{eligibleAmount.toLocaleString("en-IN")}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Loan Details ── */}
+        <div className="gl-card gl-gap-16" style={{ marginBottom: 20 }}>
+          <div className="gl-section-label">Loan details</div>
+          <div className="gl-field">
+            <label className="gl-label">Loan Date</label>
+            <input
+              className="gl-input"
+              type="date"
+              value={loanDate}
+              onChange={e => setLoanDate(e.target.value)}
+            />
+          </div>
+          <div className="gl-field">
+            <label className="gl-label">Loan amount (₹)</label>
+            <input
+              className="gl-input"
+              type="number"
+              min="0"
+              placeholder="0"
+              value={loanAmount}
+              onChange={e => setLoanAmount(e.target.value)}
+              style={{ fontVariantNumeric: "tabular-nums", fontSize: 16 }}
+            />
+          </div>
+
+          {/* Custom interest */}
+          <div>
+            <label className="gl-label">Custom interest rate % <span style={{ color: "var(--txt3)", fontWeight: 400 }}>(optional — leave blank for slab rate)</span></label>
+            <input
+              className="gl-input"
+              type="number"
+              min="0"
+              max="59.99"
+              step="0.01"
+              placeholder="e.g. 18"
+              value={manualInterestRate}
+              onChange={e => setManualInterestRate(e.target.value)}
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            />
+            {interestPreview && (
+              <div style={{ fontSize: 12, color: "var(--gold-dk)", marginTop: 6 }}>
+                Monthly interest: <strong>₹{Number(interestPreview).toLocaleString("en-IN")}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button
+          className="gl-btn gl-btn-primary gl-btn-full gl-btn-lg"
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{ marginBottom: 32 }}
+        >
+          {loading
+            ? <><span className="gl-spinner" style={{ borderTopColor: "#fff" }} /> Creating…</>
+            : "Create loan"
+          }
+        </button>
+
       </div>
-
-      {/* Loan Amount */}
-      <input
-        placeholder="Loan Amount Given"
-        type="number"
-        min="0"
-        value={loanAmount}
-        onChange={(e) => setLoanAmount(e.target.value)}
-        className="w-full mb-6 p-3 border rounded-lg"
-      />
-
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
-        <p className="text-blue-800 font-semibold mb-2">💡 Optional Custom Interest</p>
-        <p className="text-sm text-blue-700 mb-3">Leave empty for standard slab-based interest calculation.</p>
-        <input
-          placeholder="Custom Interest Rate (% per annum)"
-          type="number"
-          min="0"
-          max="59.99"
-          step="0.01"
-          value={manualInterestRate}
-          onChange={(e) => setManualInterestRate(e.target.value)}
-          className="w-full p-3 border rounded-lg"
-        />
-      </div>
-
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg disabled:opacity-50"
-      >
-        {loading ? "Processing..." : "Register Loan"}
-      </button>
-
     </div>
   );
 }

@@ -38,6 +38,7 @@ router.get("/:id/renewed-loan", authenticate, getRenewedLoan);
 router.get("/gold-rate", authenticate, getGoldRate);
 router.post("/owner/set-gold-rate", authenticate, setGoldRate);
 
+router.get("/term-over", authenticate, getTermOverLoans);
 
 router.get("/:id", authenticate, getLoanById);
 router.post("/:id/payment", authenticate, addPayment);
@@ -55,7 +56,6 @@ router.get("/staff/date-summary", authenticate, staffDateSummary);
 
 router.get("/owner/activity", authenticate, ownerActivityLogs);
 
-router.get("/term-over", authenticate, getTermOverLoans);
 
 // ✅ EXPORT AT END
 module.exports = router;

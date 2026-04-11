@@ -30,7 +30,7 @@ function getUpdatedInterest(baseRate, monthsElapsed, amount) {
 
 exports.createLoan = async (req, res) => {
   try {
-    const { customer_name, phone, address, items, loan_amount } = req.body;
+    const { customer_name, phone, address, items, loan_amount, loan_date } = req.body;
 
     if (!customer_name || !phone || !address || !items || !loan_amount) {
       return res.status(400).json({
@@ -50,12 +50,22 @@ exports.createLoan = async (req, res) => {
       });
     }
 
+    // ✅ Validate loan_date (no future date)
+    if (loan_date && new Date(loan_date) > new Date()) {
+      return res.status(400).json({
+        message: "Loan date cannot be in future"
+      });
+    }
+
     const branch_id = req.user.branch_id;
     const created_by = req.user.id;
 
-    await pool.query("BEGIN"); // 🔥 Start transaction
+    // ✅ Set created_at properly
+    const createdAt = loan_date ? new Date(loan_date) : new Date();
 
-    // 🔹 Get latest gold rate
+    await pool.query("BEGIN");
+
+    // 🔹 Get latest gold rate (legacy check)
     const settingsResult = await pool.query(
       "SELECT gold_rate FROM settings ORDER BY id DESC LIMIT 1"
     );
@@ -67,22 +77,22 @@ exports.createLoan = async (req, res) => {
       });
     }
 
-    // Get latest gold rate
+    // 🔹 Get latest gold rate (actual use)
     const goldRateResult = await pool.query(
       `SELECT gold_rate
-        FROM gold_rates
-        ORDER BY effective_from DESC
-        LIMIT 1`
+       FROM gold_rates
+       ORDER BY effective_from DESC
+       LIMIT 1`
     );
 
     if (goldRateResult.rows.length === 0) {
+      await pool.query("ROLLBACK");
       return res.status(400).json({
         message: "Gold rate not set. Owner must set gold rate first."
       });
     }
 
     const goldRate = goldRateResult.rows[0].gold_rate;
-
 
     // 🔹 Calculate total gold weight
     const totalWeight = items.reduce(
@@ -102,13 +112,12 @@ exports.createLoan = async (req, res) => {
     const isSpecialLoan = Number(loan_amount) > 40000;
     const loan_type = isSpecialLoan ? 'special' : 'normal';
 
-    // 🔹 Generate safe loan number using sequence
+    // 🔹 Generate loan number
     const seqResult = await pool.query(
       "SELECT nextval('loan_number_seq') as seq"
     );
 
     const seq = seqResult.rows[0].seq;
-    const loan_number = `BR${branch_id}-LOAN-${seq}`;
 
     let { custom_rate } = req.body;
 
@@ -122,15 +131,20 @@ exports.createLoan = async (req, res) => {
       }
     }
 
-    const dynamicInterestRate = getInterestRate(Number(loan_amount), custom_rate !== "" ? custom_rate : null);
+    const dynamicInterestRate = getInterestRate(
+      Number(loan_amount),
+      custom_rate !== "" ? custom_rate : null
+    );
 
-    // 🔹 Insert loan
+    // 🔹 Insert loan (UPDATED with created_at)
     const loanResult = await pool.query(
       `INSERT INTO loans
       (loan_number, customer_name, phone, address, items,
        gold_weight, eligible_amount,
-       gold_rate_used, branch_id, created_by, loan_amount, interest_rate, loan_type, custom_interest_rate)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       gold_rate_used, branch_id, created_by,
+       loan_amount, interest_rate, loan_type, custom_interest_rate,
+       created_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       RETURNING *`,
       [
         loan_number,
@@ -146,13 +160,16 @@ exports.createLoan = async (req, res) => {
         Number(loan_amount),
         dynamicInterestRate,
         loan_type,
-        (custom_rate !== undefined && custom_rate !== null && custom_rate !== "") ? parseFloat(custom_rate) : null
+        (custom_rate !== undefined && custom_rate !== null && custom_rate !== "")
+          ? parseFloat(custom_rate)
+          : null,
+        createdAt // 🔥 BACKDATED SUPPORT
       ]
     );
 
     const loan = loanResult.rows[0];
 
-    // 🔹 Insert initial disbursement
+    // 🔹 Insert disbursement
     await pool.query(
       `INSERT INTO loan_disbursements (loan_id, amount)
        VALUES ($1, $2)`,
@@ -167,7 +184,7 @@ exports.createLoan = async (req, res) => {
       branchId: branch_id
     });
 
-    await pool.query("COMMIT"); // 🔥 Commit transaction
+    await pool.query("COMMIT");
 
     res.json({
       message: "Loan created successfully",
@@ -175,7 +192,7 @@ exports.createLoan = async (req, res) => {
     });
 
   } catch (err) {
-    await pool.query("ROLLBACK"); // 🔥 Rollback if error
+    await pool.query("ROLLBACK");
     console.error("Create Loan Error:", err);
     res.status(500).json({ error: err.message });
   }
@@ -183,21 +200,28 @@ exports.createLoan = async (req, res) => {
 
 
 
-
 exports.searchLoans = async (req, res) => {
   try {
     const { query } = req.query;
 
-    const result = await pool.query(
-      `SELECT id, loan_number, customer_name, phone,
+    let sql = `
+       SELECT id, loan_number, customer_name, phone,
               gold_weight, eligible_amount, loan_amount, status, loan_type
        FROM loans
-       WHERE customer_name ILIKE $1
+       WHERE (customer_name ILIKE $1
           OR phone ILIKE $1
-          OR loan_number ILIKE $1
-       ORDER BY created_at DESC`,
-      [`%${query}%`]
-    );
+          OR loan_number ILIKE $1)
+    `;
+    const params = [`%${query}%`];
+
+    if (req.user.role === 'staff') {
+      sql += ` AND branch_id = $2`;
+      params.push(req.user.branch_id);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const result = await pool.query(sql, params);
 
     res.json(result.rows);
 
@@ -224,6 +248,10 @@ exports.getLoanById = async (req, res) => {
     }
 
     const loan = loanResult.rows[0];
+
+    if (req.user.role === "staff" && loan.branch_id !== req.user.branch_id) {
+      return res.status(403).json({ message: "Access denied: Loan belongs to another branch." });
+    }
 
     // =============================
     // Total Principal (Disbursements)
@@ -288,124 +316,115 @@ exports.getLoanById = async (req, res) => {
 exports.addPayment = async (req, res) => {
   try {
     const { id } = req.params;
-    let { amount_paid } = req.body;
+    let { amount_paid, payment_type } = req.body;
 
     amount_paid = parseFloat(amount_paid);
+    payment_type = payment_type || "installment"; // default
 
     if (!amount_paid || amount_paid <= 0) {
       return res.status(400).json({ message: "Invalid payment amount" });
     }
 
+    if (!["installment", "interest", "close"].includes(payment_type)) {
+      return res.status(400).json({ message: "Invalid payment type" });
+    }
+
     const loanResult = await pool.query(
-      "SELECT * FROM loans WHERE id = $1",
-      [id]
+      "SELECT * FROM loans WHERE id = $1", [id]
     );
 
-    if (loanResult.rows.length === 0) {
+    if (loanResult.rows.length === 0)
       return res.status(404).json({ message: "Loan not found" });
-    }
 
     const loan = loanResult.rows[0];
 
-    if (loan.status === "closed") {
+    if (loan.status === "closed")
       return res.status(400).json({ message: "Loan already closed" });
-    }
 
-    // 🔹 Get total principal
+    // ── Get remaining principal ──
     const principalResult = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total
-       FROM loan_disbursements
-       WHERE loan_id = $1`,
-      [id]
+      `SELECT COALESCE(SUM(amount),0) as total FROM loan_disbursements WHERE loan_id = $1`, [id]
     );
-
     const totalPrincipal = parseFloat(principalResult.rows[0].total);
 
-    // 🔹 Get total principal already paid
     const principalPaidResult = await pool.query(
-      `SELECT COALESCE(SUM(principal_paid),0) as total
-       FROM payments WHERE loan_id = $1`,
-      [id]
+      `SELECT COALESCE(SUM(principal_paid),0) as total FROM payments WHERE loan_id = $1`, [id]
     );
-
     const principalAlreadyPaid = parseFloat(principalPaidResult.rows[0].total);
+    let remainingPrincipal = parseFloat((totalPrincipal - principalAlreadyPaid).toFixed(2));
 
-    let remainingPrincipal = parseFloat(
-      (totalPrincipal - principalAlreadyPaid).toFixed(2)
-    );
-
+    // ── Calculate interest due ──
     const today = new Date();
     const creationDate = new Date(loan.created_at);
-    let monthsElapsed = (today.getFullYear() - creationDate.getFullYear()) * 12 + (today.getMonth() - creationDate.getMonth());
-    if (today.getDate() < creationDate.getDate()) {
-      monthsElapsed--;
-    }
+    let monthsElapsed = (today.getFullYear() - creationDate.getFullYear()) * 12
+      + (today.getMonth() - creationDate.getMonth());
+    if (today.getDate() < creationDate.getDate()) monthsElapsed--;
     if (monthsElapsed < 0) monthsElapsed = 0;
 
     const interestRate = getUpdatedInterest(loan.interest_rate, monthsElapsed, loan.loan_amount);
 
-    // 🔹 Calculate days since last payment
     const lastPaymentResult = await pool.query(
-      `SELECT created_at FROM payments
-       WHERE loan_id = $1
-       ORDER BY created_at DESC LIMIT 1`,
-      [id]
+      `SELECT created_at FROM payments WHERE loan_id = $1 ORDER BY created_at DESC LIMIT 1`, [id]
     );
-
     const fromDate = lastPaymentResult.rows.length
       ? new Date(lastPaymentResult.rows[0].created_at)
       : new Date(loan.created_at);
 
-    const diffDays = Math.ceil(
-      (today - fromDate) / (1000 * 60 * 60 * 24)
+    const diffDays = Math.ceil((today - fromDate) / (1000 * 60 * 60 * 24));
+    let interestDue = parseFloat(
+      ((remainingPrincipal * interestRate * diffDays) / 36500).toFixed(2)
     );
 
-    // 🔹 Calculate interest only on remaining principal
-    let interestDue =
-      (remainingPrincipal * interestRate * diffDays) / 36500;
-
-    interestDue = parseFloat(interestDue.toFixed(2));
-
-    // 🔹 Deduct interest first
-    let interestPaid = Math.min(amount_paid, interestDue);
-    amount_paid -= interestPaid;
-
-    // 🔹 Deduct principal
-    let principalPaid = Math.min(amount_paid, remainingPrincipal);
-    remainingPrincipal -= principalPaid;
-
-    // Round everything
-    interestPaid = parseFloat(interestPaid.toFixed(2));
-    principalPaid = parseFloat(principalPaid.toFixed(2));
-    remainingPrincipal = parseFloat(remainingPrincipal.toFixed(2));
-
-    // 🔹 Insert payment
-    await pool.query(
-      `INSERT INTO payments
-       (loan_id, amount_paid, interest_paid, principal_paid, received_by)
-       VALUES ($1,$2,$3,$4,$5)`,
-      [
-        id,
-        interestPaid + principalPaid,
-        interestPaid,
-        principalPaid,
-        req.user.id
-      ]
-    );
-
+    let interestPaid = 0;
+    let principalPaid = 0;
     let closed = false;
 
-    // 🔹 Close condition (SAFE)
-    if (remainingPrincipal <= 0.01) {
+    // ── Apply payment based on type ──
+    if (payment_type === "interest") {
+      // Only pay interest — principal untouched
+      interestPaid = Math.min(amount_paid, interestDue);
+      principalPaid = 0;
+
+    } else if (payment_type === "installment") {
+      // Existing logic: interest first, then principal
+      interestPaid = Math.min(amount_paid, interestDue);
+      const remaining = amount_paid - interestPaid;
+      principalPaid = Math.min(remaining, remainingPrincipal);
+
+    } else if (payment_type === "close") {
+      // Full settlement — clear everything
+      interestPaid = Math.min(amount_paid, interestDue);
+      const remaining = amount_paid - interestPaid;
+      principalPaid = Math.min(remaining, remainingPrincipal);
+      closed = true; // force close regardless
+    }
+
+    interestPaid = parseFloat(interestPaid.toFixed(2));
+    principalPaid = parseFloat(principalPaid.toFixed(2));
+    remainingPrincipal = parseFloat((remainingPrincipal - principalPaid).toFixed(2));
+
+    // ── Insert payment record ──
+    await pool.query(
+      `INSERT INTO payments
+       (loan_id, amount_paid, interest_paid, principal_paid, received_by, payment_type)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, interestPaid + principalPaid, interestPaid, principalPaid, req.user.id, payment_type]
+    );
+
+    // ── Close loan if needed ──
+    if (closed || remainingPrincipal <= 0.01) {
       await pool.query(
-        `UPDATE loans
-         SET status = 'closed',
-             closed_at = NOW()
-         WHERE id = $1`,
-        [id]
+        `UPDATE loans SET status = 'closed', closed_at = NOW() WHERE id = $1`, [id]
       );
       closed = true;
     }
+
+    await logActivity({
+      userId: req.user.id,
+      action: `Payment (${payment_type}) on loan ${loan.loan_number} — ₹${interestPaid + principalPaid}`,
+      loanId: loan.id,
+      branchId: loan.branch_id
+    });
 
     res.json({
       message: "Payment added successfully",
@@ -420,7 +439,6 @@ exports.addPayment = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 
 exports.getLoanPayments = async (req, res) => {
