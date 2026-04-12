@@ -26,8 +26,7 @@ function SearchLoan() {
     setSearched(false);
     try {
       const res = await api.get(
-        `/api/loans/search?query=${encodeURIComponent(query)}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `/api/loans/search?query=${encodeURIComponent(query)}`
       );
       setResults(res.data);
     } catch {
