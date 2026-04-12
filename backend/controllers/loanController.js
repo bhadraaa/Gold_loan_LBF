@@ -205,13 +205,17 @@ exports.searchLoans = async (req, res) => {
   try {
     const { query } = req.query;
 
+    if (!query || query.trim() === "") {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
     let sql = `
        SELECT id, loan_number, customer_name, phone,
               gold_weight, eligible_amount, loan_amount, status, loan_type
        FROM loans
        WHERE (customer_name ILIKE $1
           OR phone ILIKE $1
-          OR loan_number ILIKE $1)
+          OR loan_number::text ILIKE $1)
     `;
     const params = [`%${query}%`];
 
@@ -231,7 +235,6 @@ exports.searchLoans = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 
 
