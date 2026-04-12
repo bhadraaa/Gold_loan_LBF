@@ -51,7 +51,7 @@ exports.login = async (req, res) => {
 
     const dbUser = user.rows[0];
     let displayName = dbUser.calling_name || dbUser.full_name || dbUser.staff_name;
-    
+
     if (!displayName) {
       // Smart Fallback: vasudevan_owner1 -> Vasudevan, staff_main -> Staff
       const rawName = dbUser.name || "";
@@ -59,7 +59,7 @@ exports.login = async (req, res) => {
       displayName = firstPart.charAt(0).toUpperCase() + firstPart.slice(1).toLowerCase();
     }
 
-    res.json({ 
+    res.json({
       token,
       calling_name: displayName || "User"
     });
