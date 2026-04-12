@@ -25,9 +25,8 @@ function SearchLoan() {
     setLoading(true);
     setSearched(false);
     try {
-      const token = sessionStorage.getItem("token");
       const res = await api.get(
-        `http://localhost:5032/api/loans/search?query=${encodeURIComponent(query)}`,
+        `/api/loans/search?query=${encodeURIComponent(query)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setResults(res.data);
