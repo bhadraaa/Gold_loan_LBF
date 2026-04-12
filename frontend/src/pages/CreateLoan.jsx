@@ -66,7 +66,7 @@ function CreateLoan() {
     setLoading(true);
     try {
       await api.post("/api/loans/create", {
-        loan_number: loanNumber.trim(),
+        loan_number: loanNumber,
         customer_name: customerName,
         phone,
         address,
@@ -121,13 +121,13 @@ function CreateLoan() {
         {/* ── Loan Number ── */}
         <div className="gl-card" style={{ marginBottom: 16 }}>
           <div className="gl-field">
-            <label className="gl-label">Loan number</label>
+            <label className="gl-label">Loan Number</label>
             <input
               className="gl-input"
-              placeholder="e.g. BR1-LOAN-101"
+              placeholder=""
               value={loanNumber}
               onChange={e => setLoanNumber(e.target.value)}
-              style={{ fontFamily: "var(--mono)", fontSize: 14, letterSpacing: ".02em" }}
+              style={{ fontFamily: "var(--mono)", fontSize: 14 }}
             />
           </div>
         </div>

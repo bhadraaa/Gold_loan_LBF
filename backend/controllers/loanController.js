@@ -30,95 +30,77 @@ function getUpdatedInterest(baseRate, monthsElapsed, amount) {
 
 exports.createLoan = async (req, res) => {
   try {
-    const { customer_name, phone, address, items, loan_amount, loan_date } = req.body;
+    const { customer_name, phone, address, items, loan_amount, loan_date, loan_number } = req.body;
 
     if (!customer_name || !phone || !address || !items || !loan_amount) {
-      return res.status(400).json({
-        message: "All fields are required"
-      });
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (!loan_number || loan_number.trim() === "") {
+      return res.status(400).json({ message: "Loan number is required" });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        message: "At least one gold item required"
-      });
+      return res.status(400).json({ message: "At least one gold item required" });
     }
 
     if (req.user.role !== "staff") {
-      return res.status(403).json({
-        message: "Only staff can create loans"
-      });
+      return res.status(403).json({ message: "Only staff can create loans" });
     }
 
-    // ✅ Validate loan_date (no future date)
     if (loan_date && new Date(loan_date) > new Date()) {
-      return res.status(400).json({
-        message: "Loan date cannot be in future"
-      });
+      return res.status(400).json({ message: "Loan date cannot be in future" });
     }
 
     const branch_id = req.user.branch_id;
     const created_by = req.user.id;
-
-    // ✅ Set created_at properly
     const createdAt = loan_date ? new Date(loan_date) : new Date();
 
     await pool.query("BEGIN");
 
-    // 🔹 Get latest gold rate (legacy check)
+    // Check duplicate loan number
+    const dupCheck = await pool.query(
+      "SELECT id FROM loans WHERE loan_number = $1",
+      [loan_number]
+    );
+    if (dupCheck.rows.length > 0) {
+      await pool.query("ROLLBACK");
+      return res.status(400).json({ message: "Loan number already exists" });
+    }
+
+    // Get latest gold rate (legacy check)
     const settingsResult = await pool.query(
       "SELECT gold_rate FROM settings ORDER BY id DESC LIMIT 1"
     );
-
     if (settingsResult.rows.length === 0) {
       await pool.query("ROLLBACK");
-      return res.status(400).json({
-        message: "Gold rate not configured"
-      });
+      return res.status(400).json({ message: "Gold rate not configured" });
     }
 
-    // 🔹 Get latest gold rate (actual use)
+    // Get latest gold rate
     const goldRateResult = await pool.query(
-      `SELECT gold_rate
-       FROM gold_rates
-       ORDER BY effective_from DESC
-       LIMIT 1`
+      `SELECT gold_rate FROM gold_rates ORDER BY effective_from DESC LIMIT 1`
     );
-
     if (goldRateResult.rows.length === 0) {
       await pool.query("ROLLBACK");
-      return res.status(400).json({
-        message: "Gold rate not set. Owner must set gold rate first."
-      });
+      return res.status(400).json({ message: "Gold rate not set. Owner must set gold rate first." });
     }
 
     const goldRate = goldRateResult.rows[0].gold_rate;
 
-    // 🔹 Calculate total gold weight
+    // Calculate total gold weight
     const totalWeight = items.reduce(
-      (sum, item) => sum + parseFloat(item.weight || 0),
-      0
+      (sum, item) => sum + parseFloat(item.weight || 0), 0
     );
 
     if (totalWeight <= 0) {
       await pool.query("ROLLBACK");
-      return res.status(400).json({
-        message: "Invalid gold weight"
-      });
+      return res.status(400).json({ message: "Invalid gold weight" });
     }
 
     const eligibleAmount = totalWeight * goldRate;
-
     const isSpecialLoan = Number(loan_amount) > 40000;
     const loan_type = isSpecialLoan ? 'special' : 'normal';
-
-    // 🔹 Generate loan number
-    const seqResult = await pool.query(
-      "SELECT nextval('loan_number_seq') as seq"
-    );
-
-    const seq = seqResult.rows[0].seq;
-    const loan_number = `BR${branch_id}-LOAN-${seq}`;
 
     let { custom_rate } = req.body;
 
@@ -126,9 +108,7 @@ exports.createLoan = async (req, res) => {
       const cr = parseFloat(custom_rate);
       if (cr < 0 || cr >= 60) {
         await pool.query("ROLLBACK");
-        return res.status(400).json({
-          message: "Interest rate must be >= 0 and < 60"
-        });
+        return res.status(400).json({ message: "Interest rate must be >= 0 and < 60" });
       }
     }
 
@@ -137,18 +117,16 @@ exports.createLoan = async (req, res) => {
       custom_rate !== "" ? custom_rate : null
     );
 
-    // 🔹 Insert loan (UPDATED with created_at)
+    // Insert loan
     const loanResult = await pool.query(
       `INSERT INTO loans
       (loan_number, customer_name, phone, address, items,
-       gold_weight, eligible_amount,
-       gold_rate_used, branch_id, created_by,
-       loan_amount, interest_rate, loan_type, custom_interest_rate,
-       created_at)
+       gold_weight, eligible_amount, gold_rate_used, branch_id, created_by,
+       loan_amount, interest_rate, loan_type, custom_interest_rate, created_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       RETURNING *`,
       [
-        seq,
+        loan_number,
         customer_name,
         phone,
         address,
@@ -162,22 +140,20 @@ exports.createLoan = async (req, res) => {
         dynamicInterestRate,
         loan_type,
         (custom_rate !== undefined && custom_rate !== null && custom_rate !== "")
-          ? parseFloat(custom_rate)
-          : null,
-        createdAt // 🔥 BACKDATED SUPPORT
+          ? parseFloat(custom_rate) : null,
+        createdAt
       ]
     );
 
     const loan = loanResult.rows[0];
 
-    // 🔹 Insert disbursement
+    // Insert disbursement
     await pool.query(
-      `INSERT INTO loan_disbursements (loan_id, amount)
-       VALUES ($1, $2)`,
+      `INSERT INTO loan_disbursements (loan_id, amount) VALUES ($1, $2)`,
       [loan.id, Number(loan_amount)]
     );
 
-    // 🔹 Log activity
+    // Log activity
     await logActivity({
       userId: req.user.id,
       action: `Created loan ${loan_number}`,
@@ -187,10 +163,7 @@ exports.createLoan = async (req, res) => {
 
     await pool.query("COMMIT");
 
-    res.json({
-      message: "Loan created successfully",
-      loan
-    });
+    res.json({ message: "Loan created successfully", loan });
 
   } catch (err) {
     await pool.query("ROLLBACK");
