@@ -148,7 +148,7 @@ exports.createLoan = async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       RETURNING *`,
       [
-        loan_number,
+        seq,
         customer_name,
         phone,
         address,
@@ -571,7 +571,7 @@ exports.renewLoan = async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       RETURNING *`,
       [
-        newLoanNumber,
+        seq,
         oldLoan.customer_name,
         oldLoan.phone,
         oldLoan.address,
