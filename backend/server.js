@@ -18,20 +18,24 @@ app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/owner", require("./routes/ownerRoutes"));
 app.use("/api/settings", require("./routes/settingsRoutes"));
 
-
-// 🔁 Cron (keep before listen)
 const cron = require("node-cron");
 const { exec } = require("child_process");
 
-cron.schedule("0 2 * * *", () => {
-  exec(
-    `"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe" -U postgres gold_loan_db > backup.sql`,
-    (err) => {
-      if (err) console.log("Backup failed");
-      else console.log("Backup successful");
-    }
-  );
-});
+if (process.env.NODE_ENV !== "production") {
+  // ✅ Only runs locally (Windows)
+  cron.schedule("0 2 * * *", () => {
+    exec(
+      `"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe" -U postgres gold_loan_db > backup.sql`,
+      (err) => {
+        if (err) console.log("Backup failed");
+        else console.log("Backup successful");
+      }
+    );
+  });
+} else {
+  // ✅ Railway / production
+  console.log("Cron backup disabled in production");
+}
 
 // ✅ START SERVER LAST
 app.listen(process.env.PORT, () => {
