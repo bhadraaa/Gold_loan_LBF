@@ -118,6 +118,7 @@ exports.createLoan = async (req, res) => {
     );
 
     const seq = seqResult.rows[0].seq;
+    const loan_number = `BR${branch_id}-LOAN-${seq}`;
 
     let { custom_rate } = req.body;
 
