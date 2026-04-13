@@ -16,7 +16,6 @@ function LoanDetails() {
   const [payMsg, setPayMsg] = useState({ text: "", ok: false });
 
   // Close loan state
-  const [closeAmount, setCloseAmount] = useState("");
   const [closeMsg, setCloseMsg] = useState({ text: "", ok: false });
   const [closeConfirm, setCloseConfirm] = useState(false);
 
@@ -89,22 +88,17 @@ function LoanDetails() {
     }
   };
 
-  // ── Close loan ──
+  // ── Close loan — uses totalPayable calculated from interestData ──
   const handleClose = async () => {
-    if (!closeAmount || Number(closeAmount) <= 0) {
-      setCloseMsg({ text: "Enter the settlement amount.", ok: false });
-      return;
-    }
     try {
       const res = await api.post(`/api/loans/${id}/payment`, {
-        amount_paid: Number(closeAmount),
+        amount_paid: totalPayable,
         payment_type: "close",
       });
       setCloseMsg({
         text: `Loan closed. Interest: ₹${res.data.interestPaid} · Principal: ₹${res.data.principalPaid}`,
         ok: true,
       });
-      setCloseAmount("");
       setCloseConfirm(false);
       fetchLoanData();
       fetchInterest();
@@ -223,7 +217,7 @@ function LoanDetails() {
           padding: 14px 16px;
           background: var(--bg);
           border-bottom: 0.5px solid var(--border);
-          cursor: pointer;
+          cursor: default;
           user-select: none;
         }
         .action-section-header-left {
@@ -277,6 +271,34 @@ function LoanDetails() {
           margin-top: 12px;
           font-size: 13px;
           color: #7A4E0D;
+        }
+
+        /* Close summary box */
+        .close-summary {
+          background: #FEF2F2;
+          border: 0.5px solid #FECACA;
+          border-radius: var(--radius-xs);
+          padding: 12px 14px;
+          margin-bottom: 14px;
+        }
+        .close-summary-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+          color: var(--txt2);
+          margin-bottom: 6px;
+        }
+        .close-summary-row:last-child { margin-bottom: 0; }
+        .close-summary-total {
+          display: flex;
+          justify-content: space-between;
+          font-size: 15px;
+          font-weight: 600;
+          color: #991B1B;
+          padding-top: 8px;
+          margin-top: 8px;
+          border-top: 0.5px solid #FECACA;
+          font-variant-numeric: tabular-nums;
         }
 
         @media (max-width: 600px) {
@@ -448,7 +470,7 @@ function LoanDetails() {
 
             {/* ── SECTION 1: Make a payment ── */}
             <div className="action-section">
-              <div className="action-section-header" style={{ cursor: "default" }}>
+              <div className="action-section-header">
                 <div className="action-section-header-left">
                   <div className="action-section-icon" style={{ background: "#E6F4EC" }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -539,7 +561,7 @@ function LoanDetails() {
 
             {/* ── SECTION 2: Top-up ── */}
             <div className="action-section">
-              <div className="action-section-header" style={{ cursor: "default" }}>
+              <div className="action-section-header">
                 <div className="action-section-header-left">
                   <div className="action-section-icon" style={{ background: "#EFF6FF" }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -584,7 +606,7 @@ function LoanDetails() {
 
             {/* ── SECTION 3: Close loan ── */}
             <div className="action-section" style={{ borderColor: "#FECACA" }}>
-              <div className="action-section-header" style={{ background: "#FEF2F2", borderBottomColor: "#FECACA", cursor: "default" }}>
+              <div className="action-section-header" style={{ background: "#FEF2F2", borderBottomColor: "#FECACA" }}>
                 <div className="action-section-header-left">
                   <div className="action-section-icon" style={{ background: "#FEE2E2" }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -593,7 +615,7 @@ function LoanDetails() {
                     </svg>
                   </div>
                   <div>
-                    <div className="action-section-title" style={{ color: "var(--err-dk)" }}>Close loan</div>
+                    <div className="action-section-title" style={{ color: "#991B1B" }}>Close loan</div>
                     <div className="action-section-sub">Full settlement — gold will be released</div>
                   </div>
                 </div>
@@ -607,41 +629,38 @@ function LoanDetails() {
                   </div>
                 )}
 
-                <div style={{ fontSize: 13, color: "var(--txt2)", marginBottom: 10 }}>
-                  Enter the full settlement amount to close this loan. Outstanding:&nbsp;
-                  <strong style={{ color: "var(--txt1)", fontVariantNumeric: "tabular-nums" }}>
-                    ₹{totalPayable.toLocaleString("en-IN")}
-                  </strong>
+                {/* Settlement breakdown — read-only, calculated from interestData */}
+                <div className="close-summary">
+                  <div className="close-summary-row">
+                    <span>Remaining principal</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{interestData.remainingPrincipal?.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="close-summary-row">
+                    <span>Interest accrued ({interestData.days} days)</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>₹{interestData.interest?.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="close-summary-total">
+                    <span>Total settlement amount</span>
+                    <span>₹{totalPayable.toLocaleString("en-IN")}</span>
+                  </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
-                    type="number"
-                    className="gl-input"
-                    placeholder={`₹${totalPayable.toLocaleString("en-IN")}`}
-                    value={closeAmount}
-                    onChange={e => { setCloseAmount(e.target.value); setCloseConfirm(false); }}
-                    style={{ flex: 1, fontVariantNumeric: "tabular-nums", borderColor: "#FECACA" }}
-                  />
+                {!closeConfirm ? (
                   <button
-                    className="gl-btn"
-                    style={{ flexShrink: 0, background: "#DC2626", color: "#fff" }}
-                    onClick={() => {
-                      if (!closeAmount || Number(closeAmount) <= 0) {
-                        setCloseMsg({ text: "Enter the settlement amount first.", ok: false });
-                        return;
-                      }
-                      setCloseConfirm(true);
-                    }}
+                    className="gl-btn gl-btn-full"
+                    style={{ background: "#DC2626", color: "#fff" }}
+                    onClick={() => setCloseConfirm(true)}
                   >
-                    Close loan
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ marginRight: 6 }}>
+                      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+                      <path d="M4.5 4.5l5 5M9.5 4.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                    </svg>
+                    Close loan · ₹{totalPayable.toLocaleString("en-IN")}
                   </button>
-                </div>
-
-                {closeConfirm && (
+                ) : (
                   <div className="confirm-box">
                     <strong>⚠️ Confirm loan closure</strong>
-                    Closing with <strong style={{ fontVariantNumeric: "tabular-nums" }}>₹{Number(closeAmount).toLocaleString("en-IN")}</strong>.
+                    Closing with <strong style={{ fontVariantNumeric: "tabular-nums" }}>₹{totalPayable.toLocaleString("en-IN")}</strong> (principal + interest as of today).
                     This will mark the loan as fully settled and release the gold. This cannot be undone.
                     <div className="confirm-actions">
                       <button className="gl-btn gl-btn-sm" style={{ background: "#DC2626", color: "#fff" }} onClick={handleClose}>
@@ -658,7 +677,7 @@ function LoanDetails() {
 
             {/* ── SECTION 4: Renew loan ── */}
             <div className="action-section" style={{ borderColor: "#FDE68A" }}>
-              <div className="action-section-header" style={{ background: "#FFFBEB", borderBottomColor: "#FDE68A", cursor: "default" }}>
+              <div className="action-section-header" style={{ background: "#FFFBEB", borderBottomColor: "#FDE68A" }}>
                 <div className="action-section-header-left">
                   <div className="action-section-icon" style={{ background: "#FEF3C7" }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -742,7 +761,6 @@ function LoanDetails() {
                     <th>Amount paid</th>
                     <th>Interest</th>
                     <th>Principal</th>
-                    <th>Received by</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -765,7 +783,6 @@ function LoanDetails() {
                       </td>
                       <td style={{ color: "var(--txt2)", fontVariantNumeric: "tabular-nums" }}>₹{pay.interest_paid}</td>
                       <td style={{ color: "var(--txt2)", fontVariantNumeric: "tabular-nums" }}>₹{pay.principal_paid}</td>
-                      <td style={{ color: "var(--txt2)" }}>{pay.received_by || "Branch Staff"}</td>
                     </tr>
                   ))}
                 </tbody>
