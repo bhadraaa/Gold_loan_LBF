@@ -7,7 +7,7 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-    /* Brand Colors - Crimson & Alabaster */
+    /* Brand Colors */
     --navy: #8B0000;
     /* Deep Crimson (Primary) */
     --navy-800: #6B0000;
@@ -16,29 +16,29 @@
     /* Soft Terracotta Red */
 
     --gold: #D4AF37;
-    /* Classic Metallic Gold (Accent) */
-    --gold-lt: #FFF9F9;
-    /* Faint Rose-White Background */
-    --gold-border: #E5D1D1;
-    /* Muted Rose-Silver Border */
-    --gold-dk: #5C1A1A;
-    /* Deep Oxblood */
+    /* Classic Metallic Gold */
+    --gold-lt: #FFF8F0;
+    /* Warm cream background */
+    --gold-border: #E8D5B0;
+    /* Warm tan border */
+    --gold-dk: #7A4F00;
+    /* Deep amber — readable on gold-lt */
 
-    /* Interface Neutrals */
+    /* Interface Neutrals — light mode */
     --bg: #FCFAFA;
     /* Crisp Alabaster White */
     --surface: #FFFFFF;
     /* Pure White Surface */
     --txt1: #1F1111;
-    /* Near-Black Espresso */
-    --txt2: #692020;
-    /* Muted Charcoal Rose */
-    --txt3: #B5A8A8;
-    /* Soft Silver-Pink Placeholder */
+    /* Near-Black Espresso — main text */
+    --txt2: #5A3A3A;
+    /* Muted warm brown — secondary text */
+    --txt3: #9A7A7A;
+    /* Soft mauve — placeholder / hints */
     --border: #F0E6E6;
-    /* Subtle Rose-Tinted White */
+    /* Subtle Rose-Tinted border */
     --border-md: #D6C2C2;
-    /* Medium Warm Grey */
+    /* Medium warm border */
 
     /* Semantic Colors */
     --success: #2E7D32;
@@ -46,7 +46,7 @@
     --success-dk: #1B5E20;
     --warn: #D97706;
     --warn-lt: #FFFBEB;
-    --warn-dk: #c34d03;
+    --warn-dk: #92400E;
     --err: #DC2626;
     --err-lt: #FEF2F2;
     --err-dk: #991B1B;
@@ -89,7 +89,6 @@
 }
 
 html {
-    /* Prevent font scaling on iOS landscape */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
 }
@@ -101,7 +100,6 @@ body {
     font-size: var(--text-base);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    /* Safe area insets for notched phones */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
 }
@@ -111,7 +109,6 @@ body {
     min-height: 100vh;
     background: var(--bg);
     padding: var(--space-lg);
-    /* Bottom safe area for phones with home indicator */
     padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
 }
 
@@ -157,7 +154,6 @@ body {
 .gl-header-left {
     flex: 1;
     min-width: 0;
-    /* allow text truncation */
 }
 
 .gl-title {
@@ -165,7 +161,6 @@ body {
     font-weight: 600;
     color: var(--txt1);
     letter-spacing: -.02em;
-    /* Prevent overflow on narrow screens */
     overflow-wrap: break-word;
     word-break: break-word;
 }
@@ -203,22 +198,18 @@ body {
     background: var(--surface);
     border: 1px solid var(--border-md);
     border-radius: var(--radius-xs);
-    /* Tall enough for comfortable touch (44px+ target) */
     padding: 12px 14px;
-    font-size: var(--text-base);
+    font-size: max(16px, var(--text-base));
     font-family: var(--font);
     color: var(--txt1);
     outline: none;
     transition: border-color .15s, box-shadow .15s;
-    /* Prevent zoom on focus in iOS (must be ≥16px) */
-    font-size: max(16px, var(--text-base));
     -webkit-appearance: none;
     appearance: none;
 }
 
-/* Custom select arrow */
 .gl-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23B5A8A8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A7A7A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
     padding-right: 36px;
@@ -259,7 +250,6 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: opacity .15s, transform .1s, background .15s;
-    /* Minimum 44px touch target */
     padding: 12px 22px;
     min-height: 44px;
     white-space: nowrap;
@@ -288,11 +278,12 @@ body {
 
 .gl-btn-gold {
     background: var(--gold);
-    color: #FFFDF7;
+    color: #3A2800;
 }
 
 .gl-btn-gold:hover:not(:disabled) {
-    background: var(--gold-dk);
+    background: #B8930A;
+    color: #3A2800;
 }
 
 .gl-btn-outline {
@@ -320,10 +311,14 @@ body {
     color: #fff;
 }
 
+.gl-btn-warn:hover:not(:disabled) {
+    background: var(--warn-dk);
+}
+
 .gl-btn-ghost {
     background: transparent;
     color: var(--txt2);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-md);
 }
 
 .gl-btn-ghost:hover {
@@ -395,7 +390,7 @@ body {
 
 .gl-stat-dark-label {
     font-size: var(--text-sm);
-    color: #8FAD96;
+    color: rgba(255, 253, 247, .65);
     margin-bottom: 6px;
 }
 
@@ -403,11 +398,12 @@ body {
     font-size: var(--text-2xl);
     font-weight: 600;
     letter-spacing: -.02em;
+    color: #FFFDF7;
 }
 
 .gl-stat-dark-badge {
-    background: rgba(200, 150, 42, .20);
-    border: 1px solid rgba(200, 150, 42, .40);
+    background: rgba(212, 175, 55, .20);
+    border: 1px solid rgba(212, 175, 55, .40);
     border-radius: 20px;
     padding: 6px 14px;
     font-size: var(--text-sm);
@@ -573,7 +569,6 @@ body {
     outline: none;
     padding: 11px 14px;
     font-size: max(16px, var(--text-sm));
-    /* prevent iOS zoom */
     font-family: var(--font);
     color: var(--txt1);
     background: transparent;
@@ -608,7 +603,6 @@ body {
 .gl-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    /* smooth scroll on iOS */
     border-radius: var(--radius-sm);
     border: 0.5px solid var(--border);
 }
@@ -617,7 +611,6 @@ body {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--text-sm);
-    /* Ensure minimum width so cells don't collapse */
     min-width: 480px;
 }
 
@@ -693,7 +686,7 @@ body {
 
 .gl-payable-label {
     font-size: var(--text-xs);
-    color: #8FAD96;
+    color: rgba(255, 253, 247, .65);
     margin-bottom: 6px;
 }
 
@@ -702,11 +695,12 @@ body {
     font-weight: 600;
     letter-spacing: -.03em;
     font-variant-numeric: tabular-nums;
+    color: #FFFDF7;
 }
 
 .gl-payable-sub {
     font-size: var(--text-xs);
-    color: #C9D8CC;
+    color: rgba(255, 253, 247, .55);
     margin-top: 4px;
 }
 
@@ -821,14 +815,14 @@ body {
     justify-content: center;
     min-height: 60vh;
     font-size: var(--text-sm);
-    color: var(--txt3);
+    color: var(--txt2);
     gap: 10px;
 }
 
 .gl-spinner {
     width: 20px;
     height: 20px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--border-md);
     border-top-color: var(--navy);
     border-radius: 50%;
     animation: gl-spin .7s linear infinite;
@@ -890,15 +884,9 @@ body {
 }
 
 /* ============================================================
-   RESPONSIVE — Tablet / Mobile / Small Phone
-   Breakpoints:
-     768px  → tablet portrait
-     600px  → large phone landscape
-     430px  → standard smartphone (e.g. iPhone 14)
-     360px  → small Android
+   RESPONSIVE
    ============================================================ */
 
-/* ── Tablet (≤768px) ── */
 @media (max-width: 768px) {
     .gl-page {
         padding: 20px;
@@ -931,7 +919,6 @@ body {
     }
 }
 
-/* ── Large Phone / Landscape (≤600px) ── */
 @media (max-width: 600px) {
     .gl-page {
         padding: 16px 14px;
@@ -954,7 +941,6 @@ body {
         grid-template-columns: 1fr 1fr;
     }
 
-    /* Stack header actions below title on small screens */
     .gl-header {
         flex-direction: column;
         align-items: flex-start;
@@ -965,7 +951,6 @@ body {
         justify-content: center;
     }
 
-    /* Make search full-width */
     .gl-search {
         width: 100%;
     }
@@ -983,7 +968,6 @@ body {
     }
 }
 
-/* ── Standard Smartphone (≤430px) ── */
 @media (max-width: 430px) {
     :root {
         --radius: 10px;
@@ -1004,12 +988,10 @@ body {
         padding: 10px;
     }
 
-    /* Full-width buttons on phones */
     .gl-btn {
         width: 100%;
     }
 
-    /* Allow inline buttons (e.g. table actions) to size naturally */
     .gl-btn-inline {
         width: auto;
     }
@@ -1040,7 +1022,6 @@ body {
         font-size: clamp(22px, 7vw, 28px);
     }
 
-    /* Table: scrollable with a sticky first column hint */
     .gl-table-wrap {
         border-radius: var(--radius-sm);
     }
@@ -1054,7 +1035,6 @@ body {
         padding: 10px 12px;
     }
 
-    /* Inline detail rows wrap nicely */
     .gl-detail-table .gl-row {
         flex-direction: column;
         align-items: flex-start;
@@ -1065,25 +1045,21 @@ body {
         text-align: left;
     }
 
-    /* Gold items stack label + weight */
     .gl-gold-item {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    /* Alert text */
     .gl-alert {
         font-size: 13px;
         padding: 12px 14px;
     }
 
-    /* Search */
     .gl-search-btn {
         padding: 0 14px;
         font-size: 13px;
     }
 
-    /* Timeline tighter */
     .gl-timeline-content {
         padding-bottom: 12px;
     }
@@ -1093,7 +1069,6 @@ body {
     }
 }
 
-/* ── Small Android / Old Phones (≤360px) ── */
 @media (max-width: 360px) {
     .gl-page {
         padding: 10px 8px;
@@ -1110,8 +1085,6 @@ body {
     .gl-kpi-grid {
         grid-template-columns: 1fr;
     }
-
-    /* single column on tiny screens */
 
     .gl-badge {
         font-size: 11px;
@@ -1146,7 +1119,6 @@ body {
         border: 1px solid #ccc;
     }
 
-    /* Expand tables to full width in print */
     .gl-table-wrap {
         overflow: visible;
     }
@@ -1156,7 +1128,6 @@ body {
         font-size: 12px;
     }
 
-    /* Remove tap colors */
     .gl-btn {
         -webkit-tap-highlight-color: transparent;
     }
@@ -1166,7 +1137,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
     .gl-spinner {
         animation: none;
-        border-top-color: var(--navy);
         opacity: .6;
     }
 
@@ -1180,25 +1150,49 @@ body {
     }
 }
 
-/* ─── Dark Mode (respects OS preference) ─── */
+/* ─── Dark Mode ─── */
 @media (prefers-color-scheme: dark) {
     :root {
         --bg: #1A1010;
         --surface: #231414;
-        --txt1: #F5ECEC;
-        --txt2: #A89090;
-        --txt3: #6B5555;
+        --txt1: #F0E6E6;
+        /* Light warm white — readable on dark surface */
+        --txt2: #C49A9A;
+        /* Muted rose — secondary text on dark */
+        --txt3: #7A5A5A;
+        /* Dim mauve — placeholders on dark */
         --border: #2E1C1C;
         --border-md: #3D2525;
+
         --gold-lt: #221515;
         --gold-border: #3D2525;
-        --gold-dk: #E8B86D;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .3);
-        --shadow: 0 4px 12px rgba(0, 0, 0, .4);
-        --shadow-md: 0 8px 24px rgba(0, 0, 0, .5);
+        --gold-dk: #E8C06A;
+        /* Bright amber — readable on dark gold-lt */
+
         --success-lt: #0D1F0E;
         --warn-lt: #1C1200;
         --err-lt: #1F0A0A;
+
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .3);
+        --shadow: 0 4px 12px rgba(0, 0, 0, .4);
+        --shadow-md: 0 8px 24px rgba(0, 0, 0, .5);
+    }
+
+    /* Inputs need explicit bg in dark mode */
+    .gl-input,
+    .gl-select,
+    .gl-textarea {
+        background: #2E1A1A;
+        border-color: var(--border-md);
+        color: var(--txt1);
+    }
+
+    .gl-search input {
+        color: var(--txt1);
+    }
+
+    .gl-search {
+        background: var(--surface);
     }
 
     .gl-stat-dark {
@@ -1217,11 +1211,95 @@ body {
         background: #2A1515;
     }
 
-    .gl-search {
-        background: var(--surface);
+    .gl-table th {
+        color: var(--txt2);
+    }
+
+    .gl-table td {
+        color: var(--txt1);
     }
 
     .owner-branch-card {
         background: var(--surface);
+    }
+
+    /* Semantic badge backgrounds need lighter text in dark */
+    .gl-badge-active {
+        background: #0D2010;
+        color: #6EE08A;
+    }
+
+    .gl-badge-closed {
+        background: #1F0A0A;
+        color: #F09090;
+    }
+
+    .gl-badge-renewed {
+        background: #1C1200;
+        color: #F0C060;
+    }
+
+    .gl-badge-gold {
+        background: var(--gold-lt);
+        color: var(--gold-dk);
+        border-color: var(--gold-border);
+    }
+
+    /* Alert dark overrides */
+    .gl-alert-success {
+        background: #0D1F0E;
+        color: #6EE08A;
+        border-color: #2E6040;
+    }
+
+    .gl-alert-error {
+        background: #1F0A0A;
+        color: #F09090;
+        border-color: #6B2020;
+    }
+
+    .gl-alert-warn {
+        background: #1C1200;
+        color: #F0C060;
+        border-color: #6B4800;
+    }
+
+    .gl-alert-info {
+        background: #0A1A12;
+        color: #6EC4A0;
+        border-color: #1E5A3A;
+    }
+
+    .gl-alert-gold {
+        background: var(--gold-lt);
+        color: var(--gold-dk);
+        border-color: var(--gold-border);
+    }
+
+    /* KPI cards */
+    .gl-kpi {
+        background: var(--surface);
+    }
+
+    .gl-kpi-label {
+        color: var(--txt2);
+    }
+
+    .gl-kpi-value {
+        color: var(--txt1);
+    }
+
+    /* Detail table */
+    .gl-row-key {
+        color: var(--txt2);
+    }
+
+    .gl-row-val {
+        color: var(--txt1);
+    }
+
+    /* Loading */
+    .gl-loading {
+        color: var(--txt2);
     }
 }
