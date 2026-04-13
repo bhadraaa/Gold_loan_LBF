@@ -78,7 +78,7 @@ function OwnerDashboard() {
         {/* ── Header ── */}
         <div className="gl-header" style={{ marginBottom: 40, borderBottom: "1px solid var(--border)", paddingBottom: 20 }}>
           <div>
-            <div className="gl-title" style={{ fontFamily: "Playfair Display, serif", fontSize: 32, color: "var(--txt1)" }}>
+            <div className="gl-title" style={{ fontFamily: "Playfair Display, serif", fontSize: 32, color: "var(--txt2)" }}>
               {greet}, <span style={{ color: "var(--navy)" }}>{name}</span>
             </div>
             <div className="gl-subtitle" style={{ fontSize: 14, textTransform: "uppercase", letterSpacing: 2, color: "var(--txt2)", fontWeight: 600 }}>
@@ -86,7 +86,7 @@ function OwnerDashboard() {
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--txt1)" }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--txt2)" }}>
               {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
             </div>
             <div style={{ fontSize: 12, color: "var(--txt2)" }}>{new Date().toLocaleDateString("en-IN", { weekday: "long" })}</div>
