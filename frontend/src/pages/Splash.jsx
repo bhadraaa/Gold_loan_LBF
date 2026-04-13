@@ -27,7 +27,7 @@ export default function Splash() {
 
         .splash-root {
           min-height: 100vh;
-          background: #FFFFFF; /* Pure White Background */
+          background: #FFFFFF;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -37,86 +37,82 @@ export default function Splash() {
           font-family: 'Inter', sans-serif;
         }
 
-        /* Subtle Light Red Decorative Circle */
-        .splash-root::before {
-          content: '';
-          position: absolute;
-          width: 500px; height: 500px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(139, 0, 0, 0.03) 0%, transparent 70%);
-          bottom: -100px; left: -100px;
-        }
-
         .splash-center {
           display: flex;
           flex-direction: column;
           align-items: center;
           text-align: center;
           z-index: 1;
+          width: 100%;
         }
 
-        /* Video Container */
+        /* Rectangular Video Container (Wide width, shorter height) */
         .video-box {
-          width: 200px;
-          height: 200px;
-          border-radius: 50%; 
+          width: 320px;          /* Wider width */
+          height: 180px;         /* Shorter height */
+          border-radius: 12px;   /* Rounded corners for modern look */
           overflow: hidden;
           background: #F8F8F8;
-          box-shadow: 0 15px 35px rgba(139, 0, 0, 0.1);
-          margin-bottom: 25px;
-          animation: logo-pop 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+          box-shadow: 0 10px 30px rgba(139, 0, 0, 0.08);
+          margin-bottom: 30px;
+          position: relative;
+          animation: logo-pop 0.8s ease-out;
         }
 
+        /* Cropping & Zooming Logic */
         .splash-video {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          /* Adjust scale and Y position to center your specific logo perfectly */
+          transform: scale(1.5) translateY(0%); 
+          transition: transform 0.3s ease;
         }
 
         @keyframes logo-pop {
-          from { transform: scale(0.8); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
+          from { transform: translateY(10px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
 
         .brand-primary {
           font-family: 'Playfair Display', serif;
-          font-size: 36px;
+          font-size: 34px;
           font-weight: 700;
-          color: #8B0000; /* Deep Red Primary */
+          color: #8B0000;
           margin: 0;
           line-height: 1.2;
         }
 
         .brand-secondary {
           font-family: 'Inter', sans-serif;
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 600;
-          color: #1A1A1A; /* Charcoal/Black for contrast */
-          letter-spacing: 4px;
+          color: #1A1A1A;
+          letter-spacing: 5px;
           text-transform: uppercase;
-          margin-top: 5px;
+          margin-top: 4px;
         }
 
         .splash-tagline {
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 500;
-          color: #5C1A1A; /* Muted Dark Red */
-          letter-spacing: .15em;
+          color: #5C1A1A;
+          letter-spacing: .2em;
           text-transform: uppercase;
-          margin-top: 15px;
-          opacity: 0.7;
+          margin-top: 18px;
+          opacity: 0.6;
         }
 
         .splash-dots {
           display: flex;
-          gap: 10px;
-          margin-top: 30px;
+          gap: 12px;
+          margin-top: 35px;
         }
 
         .splash-dot {
-          width: 6px; height: 6px;
+          width: 5px; height: 5px;
           border-radius: 50%;
-          background: #8B0000; /* Red Dots */
+          background: #8B0000;
           animation: splash-dot-pulse 1.2s ease-in-out infinite;
         }
         .splash-dot:nth-child(2) { animation-delay: .2s; }
@@ -124,14 +120,14 @@ export default function Splash() {
 
         @keyframes splash-dot-pulse {
           0%, 100% { opacity: .2; transform: scale(1); }
-          50%       { opacity: 1;   transform: scale(1.3); }
+          50% { opacity: 1; transform: scale(1.4); }
         }
 
         .splash-version {
           position: absolute;
           bottom: 24px;
-          font-size: 11px;
-          color: #999;
+          font-size: 10px;
+          color: #BBB;
           letter-spacing: 1px;
         }
       `}</style>
@@ -139,12 +135,7 @@ export default function Splash() {
       <div className="splash-root">
         <div className="splash-center">
           <div className="video-box">
-            <video
-              autoPlay
-              muted
-              playsInline
-              className="splash-video"
-            >
+            <video autoPlay muted playsInline className="splash-video">
               <source src={logoVideo} type="video/mp4" />
             </video>
           </div>
@@ -160,7 +151,7 @@ export default function Splash() {
             <div className="splash-dot" />
           </div>
         </div>
-        <div className="splash-version">SECURED PLATFORM v1.0.0</div>
+        <div className="splash-version">SECURED PORTAL v1.0.0</div>
       </div>
     </>
   );
