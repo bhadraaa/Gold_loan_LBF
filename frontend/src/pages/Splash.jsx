@@ -65,8 +65,9 @@ export default function Splash() {
           height: 100%;
           object-fit: cover;
           /* Adjust scale and Y position to center your specific logo perfectly */
-          transform: scale(1.5) translateY(0%); 
-          transition: transform 0.3s ease;
+        
+          transform: scale(1.6) translateY(-12%);
+          transition: transform 0.5s ease;
         }
 
         @keyframes logo-pop {
