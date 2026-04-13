@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import React from "react";
+import newLogo from "../assets/NEWlogo.svg";
 
 const NAV = {
   staff: [
@@ -343,12 +344,10 @@ export default function Layout({ children }) {
         {/* Mobile Top Bar */}
         <div className="ly-mobile-topbar">
           <div className="ly-brand">
-            <div className="ly-logo" style={{ width: 32, height: 32 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="2.5">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+            <div className="ly-logo" style={{ width: 32, height: 32, padding: "2px", background: "transparent", boxShadow: "none" }}>
+              <img src={newLogo} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
-            <span className="ly-brand-name" style={{ fontSize: 14 }}>L.B. Adithi</span>
+            <span className="ly-brand-name" style={{ fontSize: 14 }}>L.B.A</span>
           </div>
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#888' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>

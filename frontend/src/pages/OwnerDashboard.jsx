@@ -76,33 +76,33 @@ function OwnerDashboard() {
       <div className="gl-page-wide">
 
         {/* ── Header ── */}
-        <div className="gl-header" style={{ marginBottom: 40, borderBottom: "1px solid #EEE", paddingBottom: 20 }}>
+        <div className="gl-header" style={{ marginBottom: 40, borderBottom: "1px solid var(--border)", paddingBottom: 20 }}>
           <div>
-            <div className="gl-title" style={{ fontFamily: "Playfair Display, serif", fontSize: 32, color: "#1A1A1A" }}>
-              {greet}, <span style={{ color: "#8B0000" }}>{name}</span>
+            <div className="gl-title" style={{ fontFamily: "Playfair Display, serif", fontSize: 32, color: "var(--txt1)" }}>
+              {greet}, <span style={{ color: "var(--navy)" }}>{name}</span>
             </div>
-            <div className="gl-subtitle" style={{ fontSize: 14, textTransform: "uppercase", letterSpacing: 2, color: "#666", fontWeight: 600 }}>
+            <div className="gl-subtitle" style={{ fontSize: 14, textTransform: "uppercase", letterSpacing: 2, color: "var(--txt2)", fontWeight: 600 }}>
               Lakshmi Bhadra Adithi Financiers • Executive Portal
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "#1A1A1A" }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--txt1)" }}>
               {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
             </div>
-            <div style={{ fontSize: 12, color: "#999" }}>{new Date().toLocaleDateString("en-IN", { weekday: "long" })}</div>
+            <div style={{ fontSize: 12, color: "var(--txt2)" }}>{new Date().toLocaleDateString("en-IN", { weekday: "long" })}</div>
           </div>
         </div>
 
         {/* ── KPI Grid ── */}
         <div className="gl-kpi-grid" style={{ marginBottom: 24 }}>
           {kpis.map((k) => (
-            <div className="gl-kpi" key={k.label} style={{ background: "#FFF", border: "1px solid #EAEAEA", borderRadius: 12, padding: 24 }}>
-              <div className="gl-kpi-label" style={{ color: "#888", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
-              <div className="gl-kpi-value" style={{ color: "#8B0000", fontSize: 26, margin: "4px 0" }}>{k.value}</div>
+            <div className="gl-kpi" key={k.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 24 }}>
+              <div className="gl-kpi-label" style={{ color: "var(--txt2)", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>{k.label}</div>
+              <div className="gl-kpi-value" style={{ color: "var(--navy)", fontSize: 26, margin: "4px 0" }}>{k.value}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "#BBB" }}>{k.sub}</span>
+                <span style={{ fontSize: 11, color: "var(--txt3)" }}>{k.sub}</span>
                 {k.delta === "up" && (
-                  <span style={{ fontSize: 11, color: "#2E7D32", background: "#E8F5E9", padding: "2px 8px", borderRadius: 10, fontWeight: 600 }}>
+                  <span style={{ fontSize: 11, color: "var(--success-dk, #2E7D32)", background: "var(--success-lt, #E8F5E9)", padding: "2px 8px", borderRadius: 10, fontWeight: 600 }}>
                     ↑ TRENDING
                   </span>
                 )}
@@ -113,17 +113,17 @@ function OwnerDashboard() {
 
         {/* ── Financial Summary ── */}
         {finance && (
-          <div className="gl-card" style={{ marginBottom: 24, borderLeft: "4px solid #8B0000" }}>
-            <div className="gl-section-label" style={{ color: "#1A1A1A", fontWeight: 700 }}>Financial Performance</div>
+          <div className="gl-card" style={{ marginBottom: 24, borderLeft: "4px solid var(--navy)" }}>
+            <div className="gl-section-label" style={{ color: "var(--txt1)", fontWeight: 700 }}>Financial Performance</div>
             <div className="gl-kpi-grid" style={{ marginTop: 20 }}>
               {[
-                { label: "Total Interest Earned", value: `₹${Number(finance.totalInterest).toLocaleString("en-IN")}`, color: "#8B0000" },
-                { label: "Today's Interest", value: `₹${Number(finance.todayInterest).toLocaleString("en-IN")}`, color: "#1A1A1A" },
-                { label: "Monthly Interest", value: `₹${Number(finance.monthlyInterest).toLocaleString("en-IN")}`, color: "#1A1A1A" },
-                { label: "Total Collection", value: `₹${Number(finance.totalCollection).toLocaleString("en-IN")}`, color: "#B8860B" },
+                { label: "Total Interest Earned", value: `₹${Number(finance.totalInterest).toLocaleString("en-IN")}`, color: "var(--navy)" },
+                { label: "Today's Interest", value: `₹${Number(finance.todayInterest).toLocaleString("en-IN")}`, color: "var(--txt1)" },
+                { label: "Monthly Interest", value: `₹${Number(finance.monthlyInterest).toLocaleString("en-IN")}`, color: "var(--txt1)" },
+                { label: "Total Collection", value: `₹${Number(finance.totalCollection).toLocaleString("en-IN")}`, color: "var(--gold-dk)" },
               ].map((f) => (
                 <div className="gl-kpi" key={f.label} style={{ background: "transparent", border: "none", padding: 0 }}>
-                  <div className="gl-kpi-label" style={{ fontSize: 11 }}>{f.label}</div>
+                  <div className="gl-kpi-label" style={{ fontSize: 11, color: "var(--txt2)" }}>{f.label}</div>
                   <div className="gl-kpi-value" style={{ color: f.color, fontSize: 20 }}>{f.value}</div>
                 </div>
               ))}
@@ -136,14 +136,14 @@ function OwnerDashboard() {
           <div className="gl-section-label">Branch Asset Distribution</div>
           <div className="owner-branch-grid" style={{ marginTop: 20 }}>
             {branches.map((branch) => (
-              <div className="owner-branch-card" key={branch.id} style={{ border: "1px solid #EEE", borderRadius: 10 }}>
-                <div className="owner-branch-name" style={{ color: "#8B0000", borderBottom: "1px solid #F5F5F5", paddingBottom: 10 }}>
+              <div className="owner-branch-card" key={branch.id} style={{ border: "1px solid var(--border)", borderRadius: 10 }}>
+                <div className="owner-branch-name" style={{ color: "var(--navy)", borderBottom: "1px solid var(--border)", paddingBottom: 10 }}>
                   {branch.name}
                 </div>
                 <div className="gl-detail-table" style={{ marginTop: 12 }}>
                   <div className="gl-row">
                     <span className="gl-row-key">Active Loans</span>
-                    <span className="gl-row-val" style={{ color: "#1A1A1A", fontWeight: 600 }}>{branch.active_loans}</span>
+                    <span className="gl-row-val" style={{ color: "var(--txt1)", fontWeight: 600 }}>{branch.active_loans}</span>
                   </div>
                   <div className="gl-row">
                     <span className="gl-row-key">Total Gold</span>
@@ -151,12 +151,12 @@ function OwnerDashboard() {
                   </div>
                   <div className="gl-row">
                     <span className="gl-row-key">Outstanding</span>
-                    <span className="gl-row-val" style={{ color: "#8B0000" }}>₹{Number(branch.total_outstanding).toLocaleString("en-IN")}</span>
+                    <span className="gl-row-val" style={{ color: "var(--navy)" }}>₹{Number(branch.total_outstanding).toLocaleString("en-IN")}</span>
                   </div>
                 </div>
                 <button
                   className="gl-btn gl-btn-outline gl-btn-sm gl-btn-full"
-                  style={{ marginTop: 16, borderColor: "#DDD", color: "#666" }}
+                  style={{ marginTop: 16, borderColor: "var(--border-md)", color: "var(--txt2)" }}
                   onClick={() => window.open(`/api/loans/owner/export/${branch.id}`, "_blank")}
                 >
                   Export CSV Report
@@ -178,12 +178,12 @@ function OwnerDashboard() {
               <label className="gl-label">To Date</label>
               <input type="date" className="gl-input" value={toDate} onChange={(e) => setToDate(e.target.value)} min={fromDate || undefined} />
             </div>
-            <button className="gl-btn" style={{ background: "#8B0000", color: "#FFF" }} onClick={fetchReport}>
+            <button className="gl-btn" style={{ background: "var(--navy)", color: "#FFF" }} onClick={fetchReport}>
               Generate Report
             </button>
             <button
               className="gl-btn gl-btn-ghost"
-              style={{ color: "#8B0000" }}
+              style={{ color: "var(--navy)" }}
               onClick={() => window.open(`/api/loans/owner/report/export?from=${fromDate}&to=${toDate}`, "_blank")}
             >
               Download CSV
@@ -193,11 +193,11 @@ function OwnerDashboard() {
           {reportMsg && <div className="gl-alert gl-alert-warn">{reportMsg}</div>}
 
           {reportData.length > 0 && (
-            <div className="gl-table-wrap" style={{ borderRadius: 8, border: "1px solid #EEE" }}>
+            <div className="gl-table-wrap" style={{ borderRadius: 8, border: "1px solid var(--border)" }}>
               <table className="gl-table">
                 <thead>
-                  <tr style={{ background: "#FDFDFD" }}>
-                    <th style={{ color: "#8B0000" }}>Loan No.</th>
+                  <tr style={{ background: "var(--bg)" }}>
+                    <th style={{ color: "var(--navy)" }}>Loan No.</th>
                     <th>Customer Name</th>
                     <th>Branch</th>
                     <th>Principal</th>
@@ -207,14 +207,14 @@ function OwnerDashboard() {
                 <tbody>
                   {reportData.map((row, i) => (
                     <tr key={i}>
-                      <td style={{ fontWeight: 600, color: "#555" }}>{row.loan_number}</td>
+                      <td style={{ fontWeight: 600, color: "var(--txt1)" }}>{row.loan_number}</td>
                       <td style={{ fontWeight: 500 }}>{row.customer_name}</td>
                       <td>{row.branch}</td>
                       <td style={{ fontWeight: 600 }}>₹{Number(row.loan_amount).toLocaleString("en-IN")}</td>
                       <td>
                         <span
                           className={`gl-badge ${row.status === "active" ? "gl-badge-active" : ""}`}
-                          style={row.status === 'active' ? { background: '#8B0000', color: '#FFF' } : {}}
+                          style={row.status === 'active' ? { background: 'var(--navy)', color: '#FFF' } : {}}
                         >
                           {row.status}
                         </span>
@@ -229,7 +229,7 @@ function OwnerDashboard() {
       </div>
 
       {/* Bottom Security Tag */}
-      <div style={{ textAlign: "center", padding: "40px 0", color: "#BBB", fontSize: 11, letterSpacing: 1 }}>
+      <div style={{ textAlign: "center", padding: "40px 0", color: "var(--txt3)", fontSize: 11, letterSpacing: 1 }}>
         SECURED OWNER ACCESS • LAKSHMI BHADRA ADITHI FINANCIERS v1.0.4
       </div>
     </div>

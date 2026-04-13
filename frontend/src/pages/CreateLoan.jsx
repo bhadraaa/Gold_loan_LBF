@@ -47,8 +47,8 @@ function CreateLoan() {
     if (!loanNumber.trim()) {
       setMessage("Loan number is required."); setIsError(true); return;
     }
-    if (!customerName || !phone || !address) {
-      setMessage("All customer fields are required."); setIsError(true); return;
+    if (!customerName) {
+      setMessage("Customer name is required."); setIsError(true); return;
     }
     if (items.some(i => !i.name || Number(i.weight) <= 0)) {
       setMessage("Each gold item needs a name and valid weight."); setIsError(true); return;

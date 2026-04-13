@@ -32,8 +32,8 @@ exports.createLoan = async (req, res) => {
   try {
     const { customer_name, phone, address, items, loan_amount, loan_date, loan_number } = req.body;
 
-    if (!customer_name || !phone || !address || !items || !loan_amount) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!customer_name || !items || !loan_amount) {
+      return res.status(400).json({ message: "Customer name, items and loan amount are required" });
     }
 
     if (!loan_number || loan_number.trim() === "") {

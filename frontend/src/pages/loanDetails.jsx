@@ -524,7 +524,7 @@ function LoanDetails() {
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input
                     type="number"
                     className="gl-input"
@@ -535,11 +535,11 @@ function LoanDetails() {
                     }
                     value={payAmount}
                     onChange={e => setPayAmount(e.target.value)}
-                    style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}
+                    style={{ width: "100%", fontVariantNumeric: "tabular-nums" }}
                   />
                   <button
                     className="gl-btn gl-btn-primary"
-                    style={{ flexShrink: 0, background: paymentType === "interest" ? "var(--gold)" : "var(--navy)" }}
+                    style={{ width: "100%", background: paymentType === "interest" ? "var(--gold)" : "var(--navy)" }}
                     onClick={handlePayment}
                   >
                     {paymentType === "installment" ? "Pay installment" : "Pay interest"}
@@ -581,16 +581,16 @@ function LoanDetails() {
                     {topupMsg.text}
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <input
                     type="number"
                     className="gl-input"
                     placeholder="Top-up amount (₹)"
                     value={extraAmount}
                     onChange={e => setExtraAmount(e.target.value)}
-                    style={{ flex: 1, fontVariantNumeric: "tabular-nums" }}
+                    style={{ width: "100%", fontVariantNumeric: "tabular-nums" }}
                   />
-                  <button className="gl-btn gl-btn-outline" style={{ flexShrink: 0 }} onClick={handleTopUp}>
+                  <button className="gl-btn gl-btn-outline" style={{ width: "100%" }} onClick={handleTopUp}>
                     Add top-up
                   </button>
                 </div>

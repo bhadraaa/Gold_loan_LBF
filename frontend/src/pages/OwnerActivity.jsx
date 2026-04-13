@@ -12,13 +12,17 @@ function OwnerActivity() {
   const [toDate, setToDate] = useState("");
   const [expandedRow, setExpandedRow] = useState(null);
 
+  const [allBranches, setAllBranches] = useState([]);
+
   useEffect(() => {
     api.get("/api/loans/owner/activity")
       .then(res => { setLogs(res.data); setFilteredLogs(res.data); })
       .catch(err => console.error("Activity fetch error:", err));
-  }, []);
 
-  const uniqueBranches = [...new Set(logs.map(l => l.branch_name).filter(Boolean))];
+    api.get("/api/branches")
+      .then(res => setAllBranches(res.data))
+      .catch(err => console.error("Branch fetch error:", err));
+  }, []);
 
   useEffect(() => {
     let f = [...logs];
@@ -79,7 +83,7 @@ function OwnerActivity() {
               <label className="gl-label">Branch</label>
               <select className="gl-select" value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
                 <option value="">All branches</option>
-                {uniqueBranches.map((b, i) => <option key={i} value={b}>{b}</option>)}
+                {allBranches.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
               </select>
             </div>
 
