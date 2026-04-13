@@ -129,26 +129,17 @@ export default function Login() {
 
   const handleKey = (e) => { if (e.key === "Enter") handleLogin(); };
 
-  // Theme colors based on role
-  const accent = isOwner ? "#92400E" : "#1A3C2B";
-  const accentHov = isOwner ? "#7A3310" : "#254D38";
-  const panelBg = isOwner ? "#2C1A0E" : "#1A3C2B";
-  const focusRing = isOwner ? "rgba(146,64,14,.10)" : "rgba(26,60,43,.10)";
-  const subColor = isOwner ? "#A07850" : "#8FAD96";
-  const descColor = isOwner ? "#7A5A3A" : "#5A7A65";
-  const footerClr = isOwner ? "#5A3A20" : "#3A5A45";
+  // Theme colors
+  const accent = "#8B0000"; // Deep Red
+  const accentHov = "#660000"; // Darker Red for hover
+  const panelBg = "#1A1A1A"; // Dark sidebar for a "Premium" look
+  const focusRing = "rgba(139, 0, 0, 0.15)";
+  const subColor = "rgba(255, 255, 255, 0.7)";
+  const descColor = "rgba(255, 255, 255, 0.5)";
+  const footerClr = "rgba(255, 255, 255, 0.4)";
 
   return (
     <>
-      // Define these variables at the top of your component or within the style tag
-      const accent = "#8B0000"; // Deep Red
-      const accentHov = "#660000"; // Darker Red for hover
-      const panelBg = "#1A1A1A"; // Dark sidebar for a "Premium" look
-      const subColor = "rgba(255, 255, 255, 0.7)";
-      const descColor = "rgba(255, 255, 255, 0.5)";
-      const footerClr = "rgba(255, 255, 255, 0.4)";
-      const focusRing = "rgba(139, 0, 0, 0.15)";
-
       <style>{`
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@700&display=swap');
 
