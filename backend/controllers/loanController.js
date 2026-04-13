@@ -438,8 +438,23 @@ exports.getLoanPayments = async (req, res) => {
 exports.renewLoan = async (req, res) => {
   try {
     const { id } = req.params;
+    const { new_loan_number } = req.body;
+
+    if (!new_loan_number || new_loan_number.trim() === "") {
+      return res.status(400).json({ message: "New loan number is required" });
+    }
 
     await pool.query("BEGIN");
+
+    // Check duplicate newly assigned loan number
+    const dupCheck = await pool.query(
+      "SELECT id FROM loans WHERE loan_number = $1",
+      [new_loan_number]
+    );
+    if (dupCheck.rows.length > 0) {
+      await pool.query("ROLLBACK");
+      return res.status(400).json({ message: "Loan number already exists" });
+    }
 
     // 1️⃣ Get old loan
     const loanResult = await pool.query(
@@ -529,15 +544,7 @@ exports.renewLoan = async (req, res) => {
       [id]
     );
 
-    // 7️⃣ Generate new loan number using sequence (safe way)
-    const seqResult = await pool.query(
-      `SELECT nextval('loan_number_seq') as seq`
-    );
-
-    const seq = seqResult.rows[0].seq;
-    const newLoanNumber = `BR${oldLoan.branch_id}-LOAN-${seq}`;
-
-    // 8️⃣ Create new loan
+    // 7️⃣ Create new loan using provided loan number
     const newLoanResult = await pool.query(
       `INSERT INTO loans
       (loan_number, customer_name, phone, address, items,
@@ -547,7 +554,7 @@ exports.renewLoan = async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
       RETURNING *`,
       [
-        seq,
+        new_loan_number,
         oldLoan.customer_name,
         oldLoan.phone,
         oldLoan.address,

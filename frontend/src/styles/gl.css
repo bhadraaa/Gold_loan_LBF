@@ -31,7 +31,7 @@
     /* Pure White Surface */
     --txt1: #1F1111;
     /* Near-Black Espresso */
-    --txt2: #5C5252;
+    --txt2: #f6f6f6;
     /* Muted Charcoal Rose */
     --txt3: #B5A8A8;
     /* Soft Silver-Pink Placeholder */
@@ -46,7 +46,7 @@
     --success-dk: #1B5E20;
     --warn: #D97706;
     --warn-lt: #FFFBEB;
-    --warn-dk: #92400E;
+    --warn-dk: #c34d03;
     --err: #DC2626;
     --err-lt: #FEF2F2;
     --err-dk: #991B1B;

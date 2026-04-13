@@ -108,9 +108,15 @@ function LoanDetails() {
   };
 
   // ── Renew ──
+  const [renewLoanNumber, setRenewLoanNumber] = useState("");
+
   const handleRenew = async () => {
+    if (!renewLoanNumber.trim()) {
+      setRenewMsg({ text: "Please provide a new loan number.", ok: false });
+      return;
+    }
     try {
-      const res = await api.post(`/api/loans/${id}/renew`);
+      const res = await api.post(`/api/loans/${id}/renew`, { new_loan_number: renewLoanNumber });
       window.location.href = `/loan/${res.data.newLoan.id}`;
     } catch (err) {
       setRenewMsg({ text: err.response?.data?.message || "Renewal failed.", ok: false });
@@ -726,11 +732,21 @@ function LoanDetails() {
                   <div className="renew-confirm-box">
                     <strong style={{ display: "block", marginBottom: 6 }}>⚠️ Confirm renewal</strong>
                     A new loan of <strong>₹{interestData.remainingPrincipal?.toLocaleString("en-IN")}</strong> will be created. This loan will be marked as renewed.
+                    <div className="gl-field" style={{ marginTop: 12 }}>
+                      <label style={{ fontSize: 13, marginBottom: 4 }}>New Loan Number</label>
+                      <input 
+                        className="gl-input" 
+                        value={renewLoanNumber} 
+                        onChange={(e) => setRenewLoanNumber(e.target.value)} 
+                        placeholder="Enter new loan number"
+                        style={{ padding: "8px 12px" }}
+                      />
+                    </div>
                     <div className="confirm-actions" style={{ marginTop: 10 }}>
                       <button className="gl-btn gl-btn-sm gl-btn-warn" onClick={handleRenew}>
                         Yes, renew loan
                       </button>
-                      <button className="gl-btn gl-btn-ghost gl-btn-sm" onClick={() => setRenewConfirm(false)}>
+                      <button className="gl-btn gl-btn-ghost gl-btn-sm" onClick={() => { setRenewConfirm(false); setRenewLoanNumber(""); setRenewMsg({ text: "", ok: false }); }}>
                         Cancel
                       </button>
                     </div>
