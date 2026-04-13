@@ -1,10 +1,10 @@
 /* ============================================
    GOLD LOAN SYSTEM — Design Tokens
-   Primary: Forest Green #1A3C2B
-   Accent:  Warm Cream #F5EDD6
+   Primary: Deep Crimson #8B0000
+   Accent:  Metallic Gold #D4AF37
    ============================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
     /* Brand Colors - Crimson & Alabaster */
@@ -30,7 +30,7 @@
     --surface: #FFFFFF;
     /* Pure White Surface */
     --txt1: #1F1111;
-    /* Near-Black Espresso (Softer than pure black) */
+    /* Near-Black Espresso */
     --txt2: #5C5252;
     /* Muted Charcoal Rose */
     --txt3: #B5A8A8;
@@ -42,33 +42,44 @@
 
     /* Semantic Colors */
     --success: #2E7D32;
-    /* Classic Emerald */
     --success-lt: #F1F8F1;
     --success-dk: #1B5E20;
     --warn: #D97706;
-    /* Burnt Orange */
     --warn-lt: #FFFBEB;
     --warn-dk: #92400E;
     --err: #DC2626;
-    /* Bright Alert Red */
     --err-lt: #FEF2F2;
     --err-dk: #991B1B;
 
     /* Layout & Typography */
     --radius: 12px;
-    /* Slightly tighter for elegance */
     --radius-sm: 6px;
     --radius-xs: 4px;
-    --font: 'Inter', 'Playfair Display', serif;
-    /* Sophisticated serif/sans mix */
-    --mono: 'JetBrains Mono', monospace;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
 
-    /* Elevations - Tinted with deep red for warmth */
+    /* Elevations */
     --shadow-sm: 0 1px 3px rgba(31, 17, 17, .04);
     --shadow: 0 4px 12px rgba(31, 17, 17, .06);
     --shadow-md: 0 8px 24px rgba(31, 17, 17, .08);
+
+    /* Fluid spacing scale */
+    --space-xs: clamp(4px, 1vw, 6px);
+    --space-sm: clamp(8px, 2vw, 12px);
+    --space-md: clamp(12px, 3vw, 20px);
+    --space-lg: clamp(16px, 4vw, 28px);
+    --space-xl: clamp(20px, 5vw, 40px);
+
+    /* Fluid type scale */
+    --text-xs: clamp(11px, 2.5vw, 13px);
+    --text-sm: clamp(12px, 3vw, 14px);
+    --text-base: clamp(14px, 3.5vw, 16px);
+    --text-lg: clamp(16px, 4vw, 20px);
+    --text-xl: clamp(20px, 5vw, 24px);
+    --text-2xl: clamp(24px, 6vw, 32px);
 }
 
+/* ─── Reset ─── */
 *,
 *::before,
 *::after {
@@ -77,40 +88,52 @@
     padding: 0;
 }
 
+html {
+    /* Prevent font scaling on iOS landscape */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 body {
     font-family: var(--font);
     background: var(--bg);
     color: var(--txt1);
-    font-size: 16px;
+    font-size: var(--text-base);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    /* Safe area insets for notched phones */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
 
-/* ─── Shared Components ─── */
-
+/* ─── Page Wrappers ─── */
 .gl-page {
     min-height: 100vh;
     background: var(--bg);
-    padding: 24px;
+    padding: var(--space-lg);
+    /* Bottom safe area for phones with home indicator */
+    padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom));
 }
 
 .gl-page-inner {
     max-width: 760px;
     margin: 0 auto;
+    width: 100%;
 }
 
 .gl-page-wide {
     max-width: 1080px;
     margin: 0 auto;
+    width: 100%;
 }
 
-/* Card */
+/* ─── Card ─── */
 .gl-card {
     background: var(--surface);
     border: 0.5px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow-sm);
-    padding: 24px;
+    padding: var(--space-lg);
 }
 
 .gl-card-sm {
@@ -118,44 +141,56 @@ body {
     border: 0.5px solid var(--border);
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-sm);
-    padding: 16px;
+    padding: var(--space-md);
 }
 
-/* Page header */
+/* ─── Page Header ─── */
 .gl-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 24px;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-lg);
+}
+
+.gl-header-left {
+    flex: 1;
+    min-width: 0;
+    /* allow text truncation */
 }
 
 .gl-title {
-    font-size: 24px;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--txt1);
     letter-spacing: -.02em;
+    /* Prevent overflow on narrow screens */
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .gl-subtitle {
-    font-size: 16px;
+    font-size: var(--text-sm);
     color: var(--txt2);
     margin-top: 4px;
+    overflow-wrap: break-word;
 }
 
-/* Section label */
+/* ─── Section Label ─── */
 .gl-section-label {
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--txt2);
     text-transform: uppercase;
     letter-spacing: .06em;
-    margin-bottom: 12px;
+    margin-bottom: var(--space-sm);
 }
 
-/* Inputs */
+/* ─── Form Inputs ─── */
 .gl-label {
     display: block;
-    font-size: 14px;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--txt2);
     margin-bottom: 8px;
@@ -168,19 +203,32 @@ body {
     background: var(--surface);
     border: 1px solid var(--border-md);
     border-radius: var(--radius-xs);
+    /* Tall enough for comfortable touch (44px+ target) */
     padding: 12px 14px;
-    font-size: 16px;
+    font-size: var(--text-base);
     font-family: var(--font);
     color: var(--txt1);
     outline: none;
     transition: border-color .15s, box-shadow .15s;
+    /* Prevent zoom on focus in iOS (must be ≥16px) */
+    font-size: max(16px, var(--text-base));
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Custom select arrow */
+.gl-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23B5A8A8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
 }
 
 .gl-input:focus,
 .gl-select:focus,
 .gl-textarea:focus {
     border-color: var(--navy);
-    box-shadow: 0 0 0 3px rgba(26, 60, 43, .10);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, .10);
 }
 
 .gl-input::placeholder,
@@ -198,7 +246,7 @@ body {
     flex-direction: column;
 }
 
-/* Buttons */
+/* ─── Buttons ─── */
 .gl-btn {
     display: inline-flex;
     align-items: center;
@@ -207,16 +255,21 @@ body {
     border: none;
     border-radius: var(--radius-sm);
     font-family: var(--font);
-    font-size: 15px;
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: opacity .15s, transform .1s;
+    transition: opacity .15s, transform .1s, background .15s;
+    /* Minimum 44px touch target */
     padding: 12px 22px;
+    min-height: 44px;
     white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
 }
 
 .gl-btn:active {
-    transform: scale(.98);
+    transform: scale(.97);
 }
 
 .gl-btn:disabled {
@@ -284,23 +337,26 @@ body {
 
 .gl-btn-lg {
     padding: 14px 26px;
-    font-size: 16px;
+    font-size: var(--text-base);
+    min-height: 52px;
 }
 
 .gl-btn-sm {
     padding: 8px 16px;
-    font-size: 14px;
+    font-size: var(--text-xs);
+    min-height: 36px;
 }
 
-/* Badges */
+/* ─── Badges ─── */
 .gl-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 500;
     padding: 4px 12px;
     border-radius: 20px;
+    white-space: nowrap;
 }
 
 .gl-badge-active {
@@ -324,25 +380,27 @@ body {
     border: 1px solid var(--gold-border);
 }
 
-/* Stat highlight (dark card) */
+/* ─── Stat Dark Card ─── */
 .gl-stat-dark {
     background: var(--navy);
     border-radius: var(--radius);
-    padding: 20px 24px;
+    padding: var(--space-lg) var(--space-xl);
     color: #FFFDF7;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
 }
 
 .gl-stat-dark-label {
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: #8FAD96;
     margin-bottom: 6px;
 }
 
 .gl-stat-dark-value {
-    font-size: 32px;
+    font-size: var(--text-2xl);
     font-weight: 600;
     letter-spacing: -.02em;
 }
@@ -352,15 +410,16 @@ body {
     border: 1px solid rgba(200, 150, 42, .40);
     border-radius: 20px;
     padding: 6px 14px;
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: #E8C06A;
+    white-space: nowrap;
 }
 
-/* KPI grid */
+/* ─── KPI Grid ─── */
 .gl-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+    gap: var(--space-sm);
 }
 
 .gl-kpi {
@@ -372,7 +431,7 @@ body {
 }
 
 .gl-kpi-label {
-    font-size: 13px;
+    font-size: var(--text-xs);
     color: var(--txt2);
     text-transform: uppercase;
     letter-spacing: .05em;
@@ -380,14 +439,15 @@ body {
 }
 
 .gl-kpi-value {
-    font-size: 24px;
+    font-size: var(--text-xl);
     font-weight: 600;
     color: var(--txt1);
     letter-spacing: -.02em;
+    overflow-wrap: break-word;
 }
 
 .gl-kpi-delta {
-    font-size: 13px;
+    font-size: var(--text-xs);
     color: var(--success);
     margin-top: 4px;
 }
@@ -396,7 +456,7 @@ body {
     color: var(--err);
 }
 
-/* Detail rows */
+/* ─── Detail Table ─── */
 .gl-detail-table {
     width: 100%;
 }
@@ -405,9 +465,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 10px 0;
     border-bottom: 0.5px solid var(--border);
-    font-size: 15px;
+    font-size: var(--text-sm);
 }
 
 .gl-detail-table .gl-row:last-child {
@@ -416,23 +478,28 @@ body {
 
 .gl-row-key {
     color: var(--txt2);
+    flex-shrink: 0;
 }
 
 .gl-row-val {
     font-weight: 500;
     color: var(--txt1);
     font-variant-numeric: tabular-nums;
+    text-align: right;
+    overflow-wrap: break-word;
+    word-break: break-all;
 }
 
-/* Alert / info banner */
+/* ─── Alert / Banner ─── */
 .gl-alert {
     border-radius: var(--radius-sm);
     padding: 14px 18px;
-    font-size: 15px;
+    font-size: var(--text-sm);
     display: flex;
-    gap: 12px;
+    gap: var(--space-sm);
     align-items: flex-start;
     border: 0.5px solid;
+    overflow-wrap: break-word;
 }
 
 .gl-alert-success {
@@ -465,16 +532,16 @@ body {
     border-color: var(--gold-border);
 }
 
-/* Divider with label */
+/* ─── Divider ─── */
 .gl-divider {
     display: flex;
     align-items: center;
     gap: 14px;
-    margin: 20px 0;
+    margin: var(--space-lg) 0;
 }
 
 .gl-divider-label {
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--txt2);
     text-transform: uppercase;
@@ -488,25 +555,29 @@ body {
     background: var(--border);
 }
 
-/* Search box */
+/* ─── Search Box ─── */
 .gl-search {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     background: var(--surface);
     border: 1px solid var(--border-md);
     border-radius: var(--radius-sm);
     overflow: hidden;
+    min-height: 44px;
 }
 
 .gl-search input {
     flex: 1;
+    min-width: 0;
     border: none;
     outline: none;
     padding: 11px 14px;
-    font-size: 14px;
+    font-size: max(16px, var(--text-sm));
+    /* prevent iOS zoom */
     font-family: var(--font);
     color: var(--txt1);
     background: transparent;
+    -webkit-appearance: none;
 }
 
 .gl-search input::placeholder {
@@ -518,22 +589,26 @@ body {
     color: #FFFDF7;
     border: none;
     padding: 0 18px;
-    height: 42px;
-    font-size: 14px;
+    font-size: var(--text-sm);
     font-family: var(--font);
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
     transition: background .15s;
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .gl-search-btn:hover {
     background: var(--navy-800);
 }
 
-/* Table */
+/* ─── Table ─── */
 .gl-table-wrap {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* smooth scroll on iOS */
     border-radius: var(--radius-sm);
     border: 0.5px solid var(--border);
 }
@@ -541,7 +616,9 @@ body {
 .gl-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: var(--text-sm);
+    /* Ensure minimum width so cells don't collapse */
+    min-width: 480px;
 }
 
 .gl-table thead tr {
@@ -550,13 +627,14 @@ body {
 
 .gl-table th {
     text-align: left;
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 600;
     color: var(--txt2);
     text-transform: uppercase;
     letter-spacing: .05em;
     padding: 12px 18px;
     border-bottom: 0.5px solid var(--border);
+    white-space: nowrap;
 }
 
 .gl-table td {
@@ -574,11 +652,13 @@ body {
     background: var(--gold-lt);
 }
 
-/* Gold item row */
+/* ─── Gold Item Row ─── */
 .gl-gold-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     padding: 10px 14px;
     background: var(--gold-lt);
     border: 0.5px solid var(--gold-border);
@@ -586,23 +666,23 @@ body {
 }
 
 .gl-gold-item-name {
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--txt1);
 }
 
 .gl-gold-item-weight {
-    font-size: 14px;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--gold-dk);
     font-variant-numeric: tabular-nums;
 }
 
-/* Payable big display */
+/* ─── Payable Display ─── */
 .gl-payable {
     background: var(--navy);
     border-radius: var(--radius);
-    padding: 20px 24px;
+    padding: var(--space-lg) var(--space-xl);
     text-align: center;
     color: #FFFDF7;
 }
@@ -612,25 +692,25 @@ body {
 }
 
 .gl-payable-label {
-    font-size: 12px;
+    font-size: var(--text-xs);
     color: #8FAD96;
     margin-bottom: 6px;
 }
 
 .gl-payable-amount {
-    font-size: 32px;
+    font-size: var(--text-2xl);
     font-weight: 600;
     letter-spacing: -.03em;
     font-variant-numeric: tabular-nums;
 }
 
 .gl-payable-sub {
-    font-size: 12px;
+    font-size: var(--text-xs);
     color: #C9D8CC;
     margin-top: 4px;
 }
 
-/* Timeline */
+/* ─── Timeline ─── */
 .gl-timeline {
     display: flex;
     flex-direction: column;
@@ -673,7 +753,7 @@ body {
 }
 
 .gl-timeline-title {
-    font-size: 13px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--txt1);
 }
@@ -684,7 +764,7 @@ body {
     margin-top: 1px;
 }
 
-/* Spacing helpers */
+/* ─── Spacing Helpers ─── */
 .gl-gap-4 {
     display: flex;
     flex-direction: column;
@@ -721,6 +801,7 @@ body {
     gap: 24px;
 }
 
+/* ─── Grid Helpers ─── */
 .gl-row-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -733,13 +814,13 @@ body {
     gap: 12px;
 }
 
-/* Loading */
+/* ─── Loading ─── */
 .gl-loading {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 60vh;
-    font-size: 14px;
+    font-size: var(--text-sm);
     color: var(--txt3);
     gap: 10px;
 }
@@ -751,6 +832,7 @@ body {
     border-top-color: var(--navy);
     border-radius: 50%;
     animation: gl-spin .7s linear infinite;
+    flex-shrink: 0;
 }
 
 @keyframes gl-spin {
@@ -759,47 +841,14 @@ body {
     }
 }
 
-/* Print */
-@media print {
-    .no-print {
-        display: none !important;
-    }
 
-    .gl-page {
-        padding: 0;
-    }
-
-    .gl-card {
-        box-shadow: none;
-        border: 1px solid #ccc;
-    }
-}
-
-@media (max-width: 600px) {
-    .gl-page {
-        padding: 16px;
-    }
-
-    .gl-row-2,
-    .gl-row-3 {
-        grid-template-columns: 1fr;
-    }
-
-    .gl-kpi-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-
-/* ============================================
+/* ============================================================
    OWNER PAGES — Additional styles
-   Append this to the bottom of gl.css
-   ============================================ */
+   ============================================================ */
 
-/* Branch breakdown grid */
 .owner-branch-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 14px;
 }
 
@@ -816,7 +865,7 @@ body {
 }
 
 .owner-branch-name {
-    font-size: 14px;
+    font-size: var(--text-sm);
     font-weight: 600;
     color: var(--txt1);
     padding-bottom: 10px;
@@ -835,26 +884,344 @@ body {
     flex-shrink: 0;
 }
 
-/* Activity log expanded row */
 .activity-expanded-row td {
     background: var(--gold-lt);
     border-bottom: 0.5px solid var(--gold-border);
 }
 
-/* Responsive tweaks for owner pages */
-@media (max-width: 700px) {
+/* ============================================================
+   RESPONSIVE — Tablet / Mobile / Small Phone
+   Breakpoints:
+     768px  → tablet portrait
+     600px  → large phone landscape
+     430px  → standard smartphone (e.g. iPhone 14)
+     360px  → small Android
+   ============================================================ */
+
+/* ── Tablet (≤768px) ── */
+@media (max-width: 768px) {
+    .gl-page {
+        padding: 20px;
+    }
+
+    .gl-row-3 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .gl-title {
+        font-size: clamp(18px, 5vw, 22px);
+    }
+
+    .gl-subtitle {
+        font-size: 14px;
+    }
+
+    .gl-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .gl-stat-dark {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .owner-filters-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ── Large Phone / Landscape (≤600px) ── */
+@media (max-width: 600px) {
+    .gl-page {
+        padding: 16px 14px;
+    }
+
+    .gl-card {
+        padding: 16px;
+    }
+
+    .gl-card-sm {
+        padding: 12px;
+    }
+
+    .gl-row-2,
+    .gl-row-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .gl-kpi-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Stack header actions below title on small screens */
+    .gl-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .gl-header .gl-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Make search full-width */
+    .gl-search {
+        width: 100%;
+    }
+
+    .gl-payable {
+        padding: 16px;
+    }
+
     .owner-branch-grid {
         grid-template-columns: 1fr;
     }
 
-    /* Activity filters stack on mobile */
     .owner-filters-grid {
         grid-template-columns: 1fr 1fr !important;
     }
 }
 
-@media (max-width: 480px) {
+/* ── Standard Smartphone (≤430px) ── */
+@media (max-width: 430px) {
+    :root {
+        --radius: 10px;
+        --radius-sm: 6px;
+    }
+
+    .gl-page {
+        padding: 12px 10px;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .gl-card {
+        padding: 14px 12px;
+        border-radius: var(--radius);
+    }
+
+    .gl-card-sm {
+        padding: 10px;
+    }
+
+    /* Full-width buttons on phones */
+    .gl-btn {
+        width: 100%;
+    }
+
+    /* Allow inline buttons (e.g. table actions) to size naturally */
+    .gl-btn-inline {
+        width: auto;
+    }
+
+    .gl-title {
+        font-size: clamp(16px, 5.5vw, 20px);
+        letter-spacing: -.01em;
+    }
+
+    .gl-kpi-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .gl-kpi {
+        padding: 10px 12px;
+    }
+
+    .gl-kpi-value {
+        font-size: clamp(18px, 5vw, 22px);
+    }
+
+    .gl-payable-amount {
+        font-size: clamp(22px, 7vw, 28px);
+    }
+
+    .gl-stat-dark-value {
+        font-size: clamp(22px, 7vw, 28px);
+    }
+
+    /* Table: scrollable with a sticky first column hint */
+    .gl-table-wrap {
+        border-radius: var(--radius-sm);
+    }
+
+    .gl-table {
+        min-width: 380px;
+    }
+
+    .gl-table th,
+    .gl-table td {
+        padding: 10px 12px;
+    }
+
+    /* Inline detail rows wrap nicely */
+    .gl-detail-table .gl-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .gl-row-val {
+        text-align: left;
+    }
+
+    /* Gold items stack label + weight */
+    .gl-gold-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Alert text */
+    .gl-alert {
+        font-size: 13px;
+        padding: 12px 14px;
+    }
+
+    /* Search */
+    .gl-search-btn {
+        padding: 0 14px;
+        font-size: 13px;
+    }
+
+    /* Timeline tighter */
+    .gl-timeline-content {
+        padding-bottom: 12px;
+    }
+
     .owner-filters-grid {
         grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── Small Android / Old Phones (≤360px) ── */
+@media (max-width: 360px) {
+    .gl-page {
+        padding: 10px 8px;
+    }
+
+    .gl-card {
+        padding: 12px 10px;
+    }
+
+    .gl-title {
+        font-size: 16px;
+    }
+
+    .gl-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* single column on tiny screens */
+
+    .gl-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .gl-btn {
+        font-size: 14px;
+        padding: 10px 14px;
+        min-height: 42px;
+    }
+
+    .gl-btn-sm {
+        font-size: 12px;
+        padding: 7px 12px;
+        min-height: 34px;
+    }
+}
+
+/* ─── Print ─── */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .gl-page {
+        padding: 0;
+    }
+
+    .gl-card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+
+    /* Expand tables to full width in print */
+    .gl-table-wrap {
+        overflow: visible;
+    }
+
+    .gl-table {
+        min-width: unset;
+        font-size: 12px;
+    }
+
+    /* Remove tap colors */
+    .gl-btn {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* ─── Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+    .gl-spinner {
+        animation: none;
+        border-top-color: var(--navy);
+        opacity: .6;
+    }
+
+    .gl-btn {
+        transition: none;
+    }
+
+    * {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+    }
+}
+
+/* ─── Dark Mode (respects OS preference) ─── */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #1A1010;
+        --surface: #231414;
+        --txt1: #F5ECEC;
+        --txt2: #A89090;
+        --txt3: #6B5555;
+        --border: #2E1C1C;
+        --border-md: #3D2525;
+        --gold-lt: #221515;
+        --gold-border: #3D2525;
+        --gold-dk: #E8B86D;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .3);
+        --shadow: 0 4px 12px rgba(0, 0, 0, .4);
+        --shadow-md: 0 8px 24px rgba(0, 0, 0, .5);
+        --success-lt: #0D1F0E;
+        --warn-lt: #1C1200;
+        --err-lt: #1F0A0A;
+    }
+
+    .gl-stat-dark {
+        background: #2E0A0A;
+    }
+
+    .gl-payable {
+        background: #2E0A0A;
+    }
+
+    .gl-table thead tr {
+        background: #1A1010;
+    }
+
+    .gl-table tbody tr:hover {
+        background: #2A1515;
+    }
+
+    .gl-search {
+        background: var(--surface);
+    }
+
+    .owner-branch-card {
+        background: var(--surface);
     }
 }
