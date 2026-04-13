@@ -7,57 +7,66 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-    /* Brand Colors - Forest Green & Cream */
-    --navy: #1A3C2B;
-    /* Primary Forest Green */
-    --navy-800: #254D38;
-    --navy-700: #336048;
+    /* Brand Colors - Crimson & Alabaster */
+    --navy: #8B0000;
+    /* Deep Crimson (Primary) */
+    --navy-800: #6B0000;
+    /* Dark Garnet */
+    --navy-700: #A52A2A;
+    /* Soft Terracotta Red */
 
-    --gold: #C8962A;
-    /* Warm Amber Accent */
-    --gold-lt: #FBF5E6;
-    /* Soft Cream Background */
-    --gold-border: #E8D5A3;
-    --gold-dk: #7A5A10;
+    --gold: #D4AF37;
+    /* Classic Metallic Gold (Accent) */
+    --gold-lt: #FFF9F9;
+    /* Faint Rose-White Background */
+    --gold-border: #E5D1D1;
+    /* Muted Rose-Silver Border */
+    --gold-dk: #5C1A1A;
+    /* Deep Oxblood */
 
     /* Interface Neutrals */
-    --bg: #F7F3EB;
-    /* Warm Cream Page BG */
-    --surface: #FFFDF7;
-    /* Off-White Surface */
-    --txt1: #1A2E1F;
-    /* Deep Forest Text */
-    --txt2: #4A6352;
-    /* Muted Green-Grey */
-    --txt3: #8FAD96;
-    /* Soft Sage Placeholder */
-    --border: #DED8C8;
-    /* Warm Greige Border */
-    --border-md: #C9C2AF;
-    /* Medium Greige Border */
+    --bg: #FCFAFA;
+    /* Crisp Alabaster White */
+    --surface: #FFFFFF;
+    /* Pure White Surface */
+    --txt1: #1F1111;
+    /* Near-Black Espresso (Softer than pure black) */
+    --txt2: #5C5252;
+    /* Muted Charcoal Rose */
+    --txt3: #B5A8A8;
+    /* Soft Silver-Pink Placeholder */
+    --border: #F0E6E6;
+    /* Subtle Rose-Tinted White */
+    --border-md: #D6C2C2;
+    /* Medium Warm Grey */
 
     /* Semantic Colors */
-    --success: #2D7A4F;
-    --success-lt: #E6F4EC;
-    --success-dk: #1B5235;
-    --warn: #B97A20;
-    --warn-lt: #FDF2DC;
-    --warn-dk: #7A4E0D;
-    --err: #C0392B;
-    --err-lt: #FDECEA;
-    --err-dk: #7D1F16;
+    --success: #2E7D32;
+    /* Classic Emerald */
+    --success-lt: #F1F8F1;
+    --success-dk: #1B5E20;
+    --warn: #D97706;
+    /* Burnt Orange */
+    --warn-lt: #FFFBEB;
+    --warn-dk: #92400E;
+    --err: #DC2626;
+    /* Bright Alert Red */
+    --err-lt: #FEF2F2;
+    --err-dk: #991B1B;
 
     /* Layout & Typography */
-    --radius: 14px;
-    --radius-sm: 8px;
-    --radius-xs: 6px;
-    --font: 'DM Sans', sans-serif;
-    --mono: 'DM Mono', monospace;
+    --radius: 12px;
+    /* Slightly tighter for elegance */
+    --radius-sm: 6px;
+    --radius-xs: 4px;
+    --font: 'Inter', 'Playfair Display', serif;
+    /* Sophisticated serif/sans mix */
+    --mono: 'JetBrains Mono', monospace;
 
-    /* Elevations */
-    --shadow-sm: 0 1px 3px rgba(26, 60, 43, .06), 0 1px 2px rgba(26, 60, 43, .04);
-    --shadow: 0 2px 8px rgba(26, 60, 43, .08), 0 1px 4px rgba(26, 60, 43, .04);
-    --shadow-md: 0 4px 16px rgba(26, 60, 43, .10), 0 2px 6px rgba(26, 60, 43, .06);
+    /* Elevations - Tinted with deep red for warmth */
+    --shadow-sm: 0 1px 3px rgba(31, 17, 17, .04);
+    --shadow: 0 4px 12px rgba(31, 17, 17, .06);
+    --shadow-md: 0 8px 24px rgba(31, 17, 17, .08);
 }
 
 *,
