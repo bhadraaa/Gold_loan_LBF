@@ -48,8 +48,8 @@ export default function Splash() {
 
         /* Rectangular Video Container (Wide width, shorter height) */
         .video-box {
-          width: 320px;          /* Wider width */
-          height: 180px;         /* Shorter height */
+          width: 330px;          /* Wider width */
+          height: 370px;         /* Shorter height */
           border-radius: 12px;   /* Rounded corners for modern look */
           overflow: hidden;
           background: #F8F8F8;
@@ -66,7 +66,7 @@ export default function Splash() {
           object-fit: cover;
           /* Adjust scale and Y position to center your specific logo perfectly */
         
-          transform: scale(1.6) translateY(12%);
+          transform: scale(1.6) translateY(20%);
           transition: transform 0.5s ease;
         }
 
