@@ -66,7 +66,7 @@ export default function Splash() {
           object-fit: cover;
           /* Adjust scale and Y position to center your specific logo perfectly */
         
-          transform: scale(1.6) translateY(20%);
+          transform: scale(1.6) translateY(14%);
           transition: transform 0.5s ease;
         }
 
