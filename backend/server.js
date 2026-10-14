@@ -49,6 +49,9 @@ app.get("/api/db-check", async (req, res) => {
     res.status(500).json(err.message);
   }
 });
+app.get("/", (req, res) => {
+  res.send("Gold Loan Management System API is running!");
+});
 // ✅ START SERVER LAST
 app.listen(process.env.PORT, () => {
   console.log("Server running on port " + process.env.PORT);
