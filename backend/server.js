@@ -36,12 +36,6 @@ if (process.env.NODE_ENV !== "production") {
   // ✅ Railway / production
   console.log("Cron backup disabled in production");
 }
-
-// ✅ START SERVER LAST
-app.listen(process.env.PORT, () => {
-  console.log("Server running on port " + process.env.PORT);
-});
-
 app.get("/api/test", (req, res) => {
   res.send("Backend working ✅");
 });
@@ -55,3 +49,8 @@ app.get("/api/db-check", async (req, res) => {
     res.status(500).json(err.message);
   }
 });
+// ✅ START SERVER LAST
+app.listen(process.env.PORT, () => {
+  console.log("Server running on port " + process.env.PORT);
+});
+
