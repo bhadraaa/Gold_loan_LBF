@@ -25,8 +25,10 @@
   },
   "dependencies": {
     "axios": "^1.15.0",
+    "flatpickr": "^4.6.13",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-flatpickr": "^4.0.11",
     "react-router-dom": "^6.22.3"
   }
 }
