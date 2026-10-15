@@ -113,14 +113,14 @@ export default function Layout({ children }) {
 
         .ly-brand-name {
           font-family: 'Playfair Display', serif;
-          font-size: 16px;
+          font-size: 20px;
           font-weight: 700;
           color: #FFFFFF;
           line-height: 1.1;
         }
 
         .ly-brand-role {
-          font-size: 10px;
+          font-size: 18px;
           color: #888;
           text-transform: uppercase;
           letter-spacing: 1.5px;
@@ -136,7 +136,7 @@ export default function Layout({ children }) {
         }
 
         .ly-nav-section {
-          font-size: 10px;
+          font-size: 18px;
           font-weight: 700;
           color: #555;
           text-transform: uppercase;
@@ -151,7 +151,7 @@ export default function Layout({ children }) {
           padding: 12px 16px;
           border-radius: 10px;
           text-decoration: none;
-          font-size: 14px;
+          font-size: 18px;
           font-weight: 500;
           color: #AAA;
           transition: all 0.2s;
@@ -186,7 +186,7 @@ export default function Layout({ children }) {
           border-radius: 8px;
           background: rgba(255,255,255,0.03);
           border: 1px solid rgba(255,255,255,0.1);
-          font-size: 13px;
+          font-size: 18px;
           color: #888;
           cursor: pointer;
           transition: all 0.2s;
@@ -224,7 +224,7 @@ export default function Layout({ children }) {
         }
 
         .ly-topbar-role-badge {
-          font-size: 11px;
+          font-size: 18px;
           font-weight: 700;
           padding: 6px 14px;
           border-radius: 4px;
@@ -275,7 +275,7 @@ export default function Layout({ children }) {
           gap: 4px;
           text-decoration: none;
           color: #999;
-          font-size: 10px;
+          font-size: 18px;
           font-weight: 600;
           transition: 0.2s;
         }

@@ -173,7 +173,7 @@ function LoanDetails() {
         .action-tab {
           flex: 1;
           padding: 10px 8px;
-          font-size: 13px;
+          font-size: 16px;
           font-weight: 500;
           font-family: var(--font);
           cursor: pointer;
@@ -197,10 +197,10 @@ function LoanDetails() {
         .action-tab svg { opacity: .7; }
         .action-tab.selected-installment svg,
         .action-tab.selected-interest svg { opacity: 1; }
-        .action-tab-label { font-size: 11px; }
+        .action-tab-label { font-size: 14px; }
 
         .pay-type-hint {
-          font-size: 12px;
+          font-size: 14px;
           color: var(--txt2);
           background: var(--bg);
           border: 0.5px solid var(--border);
@@ -237,8 +237,8 @@ function LoanDetails() {
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
         }
-        .action-section-title { font-size: 13px; font-weight: 600; color: var(--txt1); }
-        .action-section-sub   { font-size: 11px; color: var(--txt2); margin-top: 1px; }
+        .action-section-title { font-size: 16px; font-weight: 600; color: var(--txt1); }
+        .action-section-sub   { font-size: 16px; color: var(--txt2); margin-top: 1px; }
         .action-section-body  { padding: 16px; background: var(--surface); }
 
         .section-divider {
@@ -249,7 +249,7 @@ function LoanDetails() {
         }
         .section-divider-line { flex: 1; height: 1px; background: var(--border); }
         .section-divider-text {
-          font-size: 10px;
+          font-size: 14px;
           font-weight: 500;
           color: var(--txt3);
           text-transform: uppercase;
@@ -263,10 +263,10 @@ function LoanDetails() {
           border-radius: var(--radius-xs);
           padding: 12px 14px;
           margin-top: 10px;
-          font-size: 13px;
+          font-size: 14px;
           color: #7A4E0D;
         }
-        .confirm-box strong { display: block; margin-bottom: 8px; font-size: 13px; }
+        .confirm-box strong { display: block; margin-bottom: 8px; font-size: 14px; }
         .confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
 
         .renew-confirm-box {
@@ -275,7 +275,7 @@ function LoanDetails() {
           border-radius: var(--radius-xs);
           padding: 14px;
           margin-top: 12px;
-          font-size: 13px;
+          font-size: 16px;
           color: #7A4E0D;
         }
 
@@ -290,7 +290,7 @@ function LoanDetails() {
         .close-summary-row {
           display: flex;
           justify-content: space-between;
-          font-size: 13px;
+          font-size: 16px;
           color: var(--txt2);
           margin-bottom: 6px;
         }
@@ -298,7 +298,7 @@ function LoanDetails() {
         .close-summary-total {
           display: flex;
           justify-content: space-between;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 600;
           color: #991B1B;
           padding-top: 8px;
@@ -322,7 +322,7 @@ function LoanDetails() {
               Loan details
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
-              <span style={{ fontFamily: "var(--mono)", fontSize: 13, color: "var(--txt2)", background: "var(--bg)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "2px 8px" }}>
+              <span style={{ fontFamily: "var(--mono)", fontSize: 16, color: "var(--txt2)", background: "var(--bg)", border: "0.5px solid var(--border)", borderRadius: 6, padding: "2px 8px" }}>
                 {loan.loan_number}
               </span>
               <span className={`gl-badge ${badgeClass}`}>{badgeLabel}</span>

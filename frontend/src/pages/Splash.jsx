@@ -95,7 +95,7 @@ export default function Splash() {
         }
 
         .splash-tagline {
-          font-size: 12px;
+          font-size: 16px;
           font-weight: 500;
           color: #5C1A1A;
           letter-spacing: .2em;
@@ -127,7 +127,7 @@ export default function Splash() {
         .splash-version {
           position: absolute;
           bottom: 24px;
-          font-size: 10px;
+          font-size: 16px;
           color: #BBB;
           letter-spacing: 1px;
         }

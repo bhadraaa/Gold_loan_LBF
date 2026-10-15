@@ -1,12 +1,10 @@
-/* ============================================
-   GOLD LOAN SYSTEM — Design Tokens
-   Primary: Deep Crimson #8B0000
-   Accent:  Metallic Gold #D4AF37
-   ============================================ */
+
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
+    color-scheme: light;
+
     /* Brand Colors */
     --navy: #8B0000;
     /* Deep Crimson (Primary) */
@@ -19,36 +17,36 @@
     /* Classic Metallic Gold */
     --gold-lt: #FFF8F0;
     /* Warm cream background */
-    --gold-border: #E8D5B0;
+    --gold-border: #D9BE86;
     /* Warm tan border */
     --gold-dk: #7A4F00;
     /* Deep amber — readable on gold-lt */
 
     /* Interface Neutrals — light mode */
-    --bg: #FCFAFA;
+    --bg: #F8F4F4;
     /* Crisp Alabaster White */
     --surface: #FFFFFF;
     /* Pure White Surface */
-    --txt1: #1F1111;
+    --txt1: #140A0A;
     /* Near-Black Espresso — main text */
-    --txt2: #5A3A3A;
+    --txt2: #4A2C2C;
     /* Muted warm brown — secondary text */
-    --txt3: #9A7A7A;
+    --txt3: #7A5555;
     /* Soft mauve — placeholder / hints */
-    --border: #F0E6E6;
+    --border: #D8C6C6;
     /* Subtle Rose-Tinted border */
-    --border-md: #D6C2C2;
+    --border-md: #6E5D5D;
     /* Medium warm border */
 
     /* Semantic Colors */
     --success: #2E7D32;
-    --success-lt: #F1F8F1;
+    --success-lt: #E6F4E7;
     --success-dk: #1B5E20;
-    --warn: #D97706;
-    --warn-lt: #FFFBEB;
+    --warn: #B45309;
+    --warn-lt: #FEF3C7;
     --warn-dk: #92400E;
     --err: #DC2626;
-    --err-lt: #FEF2F2;
+    --err-lt: #FDE8E8;
     --err-dk: #991B1B;
 
     /* Layout & Typography */
@@ -71,8 +69,8 @@
     --space-xl: clamp(20px, 5vw, 40px);
 
     /* Fluid type scale */
-    --text-xs: clamp(11px, 2.5vw, 13px);
-    --text-sm: clamp(12px, 3vw, 14px);
+    --text-xs: clamp(16px, calc(2.5vw + 4px), 17px);
+    --text-sm: clamp(16px, calc(3vw + 4px), 18px);
     --text-base: clamp(14px, 3.5vw, 16px);
     --text-lg: clamp(16px, 4vw, 20px);
     --text-xl: clamp(20px, 5vw, 24px);
@@ -174,7 +172,7 @@ body {
 
 /* ─── Section Label ─── */
 .gl-section-label {
-    font-size: var(--text-xs);
+    font-size: 24px;
     font-weight: 600;
     color: var(--txt2);
     text-transform: uppercase;
@@ -185,7 +183,7 @@ body {
 /* ─── Form Inputs ─── */
 .gl-label {
     display: block;
-    font-size: var(--text-sm);
+    font-size: 25px;
     font-weight: 500;
     color: var(--txt2);
     margin-bottom: 8px;
@@ -199,7 +197,7 @@ body {
     border: 1px solid var(--border-md);
     border-radius: var(--radius-xs);
     padding: 12px 14px;
-    font-size: max(16px, var(--text-base));
+    font-size: max(24px, var(--text-base));
     font-family: var(--font);
     color: var(--txt1);
     outline: none;
@@ -209,7 +207,7 @@ body {
 }
 
 .gl-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A7A7A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234A2C2C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
     padding-right: 36px;
@@ -219,7 +217,7 @@ body {
 .gl-select:focus,
 .gl-textarea:focus {
     border-color: var(--navy);
-    box-shadow: 0 0 0 3px rgba(139, 0, 0, .10);
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, .28);
 }
 
 .gl-input::placeholder,
@@ -390,7 +388,7 @@ body {
 
 .gl-stat-dark-label {
     font-size: var(--text-sm);
-    color: rgba(255, 253, 247, .65);
+    color: rgba(255, 253, 247, .90);
     margin-bottom: 6px;
 }
 
@@ -403,11 +401,11 @@ body {
 
 .gl-stat-dark-badge {
     background: rgba(212, 175, 55, .20);
-    border: 1px solid rgba(212, 175, 55, .40);
+    border: 1px solid rgba(212, 175, 55, .70);
     border-radius: 20px;
     padding: 6px 14px;
     font-size: var(--text-sm);
-    color: #E8C06A;
+    color: #FFE08A;
     white-space: nowrap;
 }
 
@@ -559,7 +557,7 @@ body {
     border: 1px solid var(--border-md);
     border-radius: var(--radius-sm);
     overflow: hidden;
-    min-height: 44px;
+    min-height: 50px;
 }
 
 .gl-search input {
@@ -568,7 +566,7 @@ body {
     border: none;
     outline: none;
     padding: 11px 14px;
-    font-size: max(16px, var(--text-sm));
+    font-size: max(24px, var(--text-sm));
     font-family: var(--font);
     color: var(--txt1);
     background: transparent;
@@ -584,13 +582,13 @@ body {
     color: #FFFDF7;
     border: none;
     padding: 0 18px;
-    font-size: var(--text-sm);
+    font-size: 20px;
     font-family: var(--font);
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
     transition: background .15s;
-    min-height: 44px;
+    min-height: 50px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
@@ -686,7 +684,7 @@ body {
 
 .gl-payable-label {
     font-size: var(--text-xs);
-    color: rgba(255, 253, 247, .65);
+    color: rgba(255, 253, 247, .90);
     margin-bottom: 6px;
 }
 
@@ -700,7 +698,7 @@ body {
 
 .gl-payable-sub {
     font-size: var(--text-xs);
-    color: rgba(255, 253, 247, .55);
+    color: rgba(255, 253, 247, .85);
     margin-top: 4px;
 }
 
@@ -753,7 +751,7 @@ body {
 }
 
 .gl-timeline-date {
-    font-size: 11px;
+    font-size: 14px;
     color: var(--txt3);
     margin-top: 1px;
 }
@@ -1051,13 +1049,13 @@ body {
     }
 
     .gl-alert {
-        font-size: 13px;
+        font-size: 16px;
         padding: 12px 14px;
     }
 
     .gl-search-btn {
         padding: 0 14px;
-        font-size: 13px;
+        font-size: 16px;
     }
 
     .gl-timeline-content {
@@ -1087,7 +1085,7 @@ body {
     }
 
     .gl-badge {
-        font-size: 11px;
+        font-size: 16px;
         padding: 3px 8px;
     }
 
@@ -1098,7 +1096,7 @@ body {
     }
 
     .gl-btn-sm {
-        font-size: 12px;
+        font-size: 14px;
         padding: 7px 12px;
         min-height: 34px;
     }
@@ -1125,7 +1123,7 @@ body {
 
     .gl-table {
         min-width: unset;
-        font-size: 12px;
+        font-size: 14px;
     }
 
     .gl-btn {
@@ -1149,157 +1147,49 @@ body {
         animation-duration: .01ms !important;
     }
 }
+/* ==========================================
+   FLATPICKR OVERRIDES FOR MASSIVE TEXT & GRID
+   ========================================== */
 
-/* ─── Dark Mode ─── */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #1A1010;
-        --surface: #231414;
-        --txt1: #F0E6E6;
-        /* Light warm white — readable on dark surface */
-        --txt2: #C49A9A;
-        /* Muted rose — secondary text on dark */
-        --txt3: #7A5A5A;
-        /* Dim mauve — placeholders on dark */
-        --border: #2E1C1C;
-        --border-md: #3D2525;
+/* 1. Scale up the base container card panel */
+.flatpickr-calendar.custom-big-calendar {
+  font-size: 20px !important;       /* Increases all text proportionally */
+  width: 360px !important;          /* Widens the outer card block boundary wrapper */
+}
 
-        --gold-lt: #221515;
-        --gold-border: #3D2525;
-        --gold-dk: #E8C06A;
-        /* Bright amber — readable on dark gold-lt */
+/* 2. Adjust internal grid widths for spacious breathing room */
+.custom-big-calendar .flatpickr-days,
+.custom-big-calendar .dayContainer {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+}
 
-        --success-lt: #0D1F0E;
-        --warn-lt: #1C1200;
-        --err-lt: #1F0A0A;
+/* 3. Scale up each individual day cell element */
+.custom-big-calendar .flatpickr-day {
+  max-width: 48px !important;
+  height: 48px !important;
+  line-height: 48px !important;     /* Vertically centers numbers perfectly */
+  margin: 2px 0 !important;
+}
 
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, .3);
-        --shadow: 0 4px 12px rgba(0, 0, 0, .4);
-        --shadow-md: 0 8px 24px rgba(0, 0, 0, .5);
-    }
+/* 4. Enlarge top header navigation labels and chevrons */
+.custom-big-calendar .flatpickr-current-month {
+  font-size: 22px !important;
+  padding: 6px 0 0 0 !important;
+}
+.custom-big-calendar .flatpickr-prev-month, 
+.custom-big-calendar .flatpickr-next-month {
+  padding: 10px !important;
+}
+.custom-big-calendar .flatpickr-prev-month svg, 
+.custom-big-calendar .flatpickr-next-month svg {
+  width: 18px !important;
+  height: 18px !important;
+}
 
-    /* Inputs need explicit bg in dark mode */
-    .gl-input,
-    .gl-select,
-    .gl-textarea {
-        background: #2E1A1A;
-        border-color: var(--border-md);
-        color: var(--txt1);
-    }
-
-    .gl-search input {
-        color: var(--txt1);
-    }
-
-    .gl-search {
-        background: var(--surface);
-    }
-
-    .gl-stat-dark {
-        background: #2E0A0A;
-    }
-
-    .gl-payable {
-        background: #2E0A0A;
-    }
-
-    .gl-table thead tr {
-        background: #1A1010;
-    }
-
-    .gl-table tbody tr:hover {
-        background: #2A1515;
-    }
-
-    .gl-table th {
-        color: var(--txt2);
-    }
-
-    .gl-table td {
-        color: var(--txt1);
-    }
-
-    .owner-branch-card {
-        background: var(--surface);
-    }
-
-    /* Semantic badge backgrounds need lighter text in dark */
-    .gl-badge-active {
-        background: #0D2010;
-        color: #6EE08A;
-    }
-
-    .gl-badge-closed {
-        background: #1F0A0A;
-        color: #F09090;
-    }
-
-    .gl-badge-renewed {
-        background: #1C1200;
-        color: #F0C060;
-    }
-
-    .gl-badge-gold {
-        background: var(--gold-lt);
-        color: var(--gold-dk);
-        border-color: var(--gold-border);
-    }
-
-    /* Alert dark overrides */
-    .gl-alert-success {
-        background: #0D1F0E;
-        color: #6EE08A;
-        border-color: #2E6040;
-    }
-
-    .gl-alert-error {
-        background: #1F0A0A;
-        color: #F09090;
-        border-color: #6B2020;
-    }
-
-    .gl-alert-warn {
-        background: #1C1200;
-        color: #F0C060;
-        border-color: #6B4800;
-    }
-
-    .gl-alert-info {
-        background: #0A1A12;
-        color: #6EC4A0;
-        border-color: #1E5A3A;
-    }
-
-    .gl-alert-gold {
-        background: var(--gold-lt);
-        color: var(--gold-dk);
-        border-color: var(--gold-border);
-    }
-
-    /* KPI cards */
-    .gl-kpi {
-        background: var(--surface);
-    }
-
-    .gl-kpi-label {
-        color: var(--txt2);
-    }
-
-    .gl-kpi-value {
-        color: var(--txt1);
-    }
-
-    /* Detail table */
-    .gl-row-key {
-        color: var(--txt2);
-    }
-
-    .gl-row-val {
-        color: var(--txt1);
-    }
-
-    /* Loading */
-    .gl-loading {
-        color: var(--txt2);
-    }
+/* 5. Scale the weekday headers row (Su, Mo, Tu...) */
+.custom-big-calendar span.flatpickr-weekday {
+  font-size: 16px !important;
+  font-weight: 600 !important;
 }

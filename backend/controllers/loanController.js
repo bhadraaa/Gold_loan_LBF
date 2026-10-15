@@ -1,42 +1,265 @@
 const pool = require("../config/db");
 const logActivity = require("../utils/auditLogger");
 
-function getInterestRate(amount, customRate) {
-  if (customRate !== undefined && customRate !== null) return parseFloat(customRate);
+/* ============================================================
+   SHARED HELPERS
+   ============================================================ */
 
-  if (amount > 40000) {
-    if (amount < 50000) return 18;
-    if (amount < 60000) return 16;
+class HttpError extends Error {
+  constructor(status, body) {
+    super(body && body.message ? body.message : "Request failed");
+    this.status = status;
+    this.body = body;
+  }
+}
+
+// Sends the right response for an error thrown inside a handler.
+function sendError(res, err, label) {
+  if (err instanceof HttpError) {
+    return res.status(err.status).json(err.body);
+  }
+  console.error(label, err);
+  return res.status(500).json({ error: err.message });
+}
+
+// Runs fn(client) inside ONE dedicated connection so that BEGIN, every
+// query and COMMIT/ROLLBACK are guaranteed to share the same transaction.
+async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback error:", rollbackError.message);
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// Audit logging must never turn a committed transaction into an error
+// response (the user could retry and create a duplicate payment).
+async function safeLogActivity(payload) {
+  try {
+    await logActivity(payload);
+  } catch (logError) {
+    console.error("Activity log error:", logError.message);
+  }
+}
+
+const round2 = (n) => Number(Number(n).toFixed(2));
+
+function isBlank(value) {
+  return value === undefined || value === null || value === "";
+}
+
+/* ============================================================
+   INTEREST RATE HELPERS
+   ============================================================ */
+
+function getInterestRate(amount, customRate) {
+  if (customRate !== undefined && customRate !== null && customRate !== "") {
+    return parseFloat(customRate);
+  }
+
+  if (amount > 80000) {
+    return 13;
+  } else if (amount > 40000) {
     return 16;
+  } else if (amount > 25000) {
+    return 19;
+  } else if (amount > 5000) {
+    return 22;
   } else {
-    if (amount < 5000) return 24;
-    if (amount < 10000) return 24;
-    if (amount < 25000) return 22;
-    return 20;
+    return 24; // Loans of ₹5,000 or below
   }
 }
 
 function getUpdatedInterest(baseRate, monthsElapsed, amount) {
-  const isSpecial = amount > 40000;
   baseRate = parseFloat(baseRate) || 0;
-  if (isSpecial) {
-    const increments = Math.floor(monthsElapsed / 3);
-    return baseRate + (increments * 3);
-  } else {
-    const increments = Math.floor(monthsElapsed / 6);
-    return baseRate + (increments * 3);
+  monthsElapsed = Math.max(0, parseInt(monthsElapsed, 10) || 0);
+
+  const increments = Math.floor(monthsElapsed / 6);
+
+  return baseRate + increments * 3;
+}
+
+/* ============================================================
+   SINGLE SOURCE OF TRUTH FOR INTEREST
+   Used by: calculateInterest (preview), addPayment, renewLoan.
+
+   Rules
+   1. Interest accrues per day on the outstanding principal:
+        interest = principal x rate x days / 36500
+   2. The principal is tracked as a ledger. Every disbursement
+      (initial loan and each top-up) starts earning interest on ITS
+      OWN date, and every principal repayment stops earning interest
+      on ITS OWN date.
+   3. The rate is the base rate plus 3 points for every completed
+      6 months since the loan date, and it applies to the ENTIRE
+      duration (not only to the days after the 6-month mark).
+   4. Interest already collected (payments.interest_paid) is
+      subtracted, so nothing is ever charged twice.
+   5. A minimum of one day of interest is charged.
+   ============================================================ */
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// Whole calendar-day number (timezone/time-of-day safe).
+function toDayNumber(value) {
+  const d = new Date(value);
+  return Math.floor(
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / MS_PER_DAY
+  );
+}
+
+function completedMonthsBetween(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+
+  let months =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth());
+
+  if (end.getDate() < start.getDate()) {
+    months--;
   }
+
+  return Math.max(months, 0);
+}
+
+// db can be the pool or a transaction client.
+async function getLoanLedger(db, loanId) {
+  const disbursements = await db.query(
+    `SELECT amount, created_at
+     FROM loan_disbursements
+     WHERE loan_id = $1
+     ORDER BY created_at ASC`,
+    [loanId]
+  );
+
+  const payments = await db.query(
+    `SELECT principal_paid, interest_paid, payment_date
+     FROM payments
+     WHERE loan_id = $1
+     ORDER BY payment_date ASC`,
+    [loanId]
+  );
+
+  return {
+    disbursements: disbursements.rows,
+    payments: payments.rows
+  };
+}
+
+function computeLoanInterest(loan, ledger, asOf = new Date()) {
+  const created = new Date(loan.created_at);
+
+  if (Number.isNaN(created.getTime())) {
+    throw new Error("Invalid loan creation date");
+  }
+
+  const startDay = toDayNumber(created);
+  // Minimum one day of interest.
+  const endDay = Math.max(toDayNumber(asOf), startDay + 1);
+
+  const monthsElapsed = completedMonthsBetween(created, asOf);
+  const rate = getUpdatedInterest(loan.interest_rate, monthsElapsed);
+
+  // Build the principal ledger: +disbursements, -principal repayments.
+  const events = [];
+
+  ledger.disbursements.forEach((d, index) => {
+    let day;
+
+    if (index === 0) {
+      // The first disbursement is the loan itself. It always starts on
+      // the loan date (important for back-dated loans).
+      day = startDay;
+    } else {
+      if (!d.created_at) {
+        throw new Error("Top-up disbursement is missing its date");
+      }
+      day = Math.min(Math.max(toDayNumber(d.created_at), startDay), endDay);
+    }
+
+    events.push({ day, delta: Number(d.amount) || 0 });
+  });
+
+  ledger.payments.forEach((p) => {
+    if (!p.payment_date) {
+      throw new Error("A payment on this loan is missing its payment date");
+    }
+    const day = Math.min(Math.max(toDayNumber(p.payment_date), startDay), endDay);
+    events.push({ day, delta: -(Number(p.principal_paid) || 0) });
+  });
+
+  events.sort((a, b) => a.day - b.day);
+
+  // Sum of (outstanding principal x days it was outstanding).
+  let balance = 0;
+  let cursor = startDay;
+  let principalDays = 0;
+
+  for (const event of events) {
+    principalDays += balance * (event.day - cursor);
+    balance += event.delta;
+    cursor = event.day;
+  }
+  principalDays += balance * (endDay - cursor);
+
+  const accruedInterest = round2((principalDays * rate) / 36500);
+
+  const interestPaidTotal = round2(
+    ledger.payments.reduce((s, p) => s + (Number(p.interest_paid) || 0), 0)
+  );
+
+  const interestDue = Math.max(round2(accruedInterest - interestPaidTotal), 0);
+
+  const totalDisbursed = round2(
+    ledger.disbursements.reduce((s, d) => s + (Number(d.amount) || 0), 0)
+  );
+
+  const principalPaidTotal = round2(
+    ledger.payments.reduce((s, p) => s + (Number(p.principal_paid) || 0), 0)
+  );
+
+  const remainingPrincipal = Math.max(
+    round2(totalDisbursed - principalPaidTotal),
+    0
+  );
+
+  return {
+    rate,
+    monthsElapsed,
+    days: endDay - startDay,
+    accruedInterest,
+    interestPaidTotal,
+    interestDue,
+    totalDisbursed,
+    principalPaidTotal,
+    remainingPrincipal
+  };
 }
 
 exports.createLoan = async (req, res) => {
   try {
-    const { customer_name, phone, address, items, loan_amount, loan_date, loan_number } = req.body;
+    const { customer_name, phone, address, items, loan_amount, loan_date } = req.body;
+    const { custom_rate } = req.body;
 
     if (!customer_name || !items || !loan_amount) {
       return res.status(400).json({ message: "Customer name, items and loan amount are required" });
     }
 
-    if (!loan_number || loan_number.trim() === "") {
+    const loanNumber = String(req.body.loan_number ?? "").trim();
+
+    if (!loanNumber) {
       return res.status(400).json({ message: "Loan number is required" });
     }
 
@@ -48,131 +271,146 @@ exports.createLoan = async (req, res) => {
       return res.status(403).json({ message: "Only staff can create loans" });
     }
 
-    if (loan_date && new Date(loan_date) > new Date()) {
-      return res.status(400).json({ message: "Loan date cannot be in future" });
+    const loanAmount = Number(loan_amount);
+
+    if (!Number.isFinite(loanAmount) || loanAmount <= 0) {
+      return res.status(400).json({ message: "Invalid loan amount" });
     }
 
-    const branch_id = req.user.branch_id;
-    const created_by = req.user.id;
-    const createdAt = loan_date ? new Date(loan_date) : new Date();
+    if (loan_date) {
+      const parsedDate = new Date(loan_date);
 
-    await pool.query("BEGIN");
+      if (Number.isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: "Invalid loan date" });
+      }
 
-    // Check duplicate loan number
-    const dupCheck = await pool.query(
-      "SELECT id FROM loans WHERE loan_number = $1",
-      [loan_number]
-    );
-    if (dupCheck.rows.length > 0) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({ message: "Loan number already exists" });
+      if (parsedDate > new Date()) {
+        return res.status(400).json({ message: "Loan date cannot be in future" });
+      }
     }
 
-    // Get latest gold rate (legacy check)
-    const settingsResult = await pool.query(
-      "SELECT gold_rate FROM settings ORDER BY id DESC LIMIT 1"
-    );
-    if (settingsResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({ message: "Gold rate not configured" });
-    }
+    // Custom rate must be a real number inside the allowed range.
+    // (parseFloat("abc") is NaN, and NaN passes every < / >= comparison.)
+    let customRateValue = null;
 
-    // Get latest gold rate
-    const goldRateResult = await pool.query(
-      `SELECT gold_rate FROM gold_rates ORDER BY effective_from DESC LIMIT 1`
-    );
-    if (goldRateResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({ message: "Gold rate not set. Owner must set gold rate first." });
-    }
+    if (!isBlank(custom_rate)) {
+      customRateValue = Number(custom_rate);
 
-    const goldRate = goldRateResult.rows[0].gold_rate;
+      if (!Number.isFinite(customRateValue)) {
+        return res.status(400).json({ message: "Interest rate must be a valid number" });
+      }
+
+      if (customRateValue < 0 || customRateValue >= 60) {
+        return res.status(400).json({ message: "Interest rate must be >= 0 and < 60" });
+      }
+    }
 
     // Calculate total gold weight
     const totalWeight = items.reduce(
       (sum, item) => sum + parseFloat(item.weight || 0), 0
     );
 
-    if (totalWeight <= 0) {
-      await pool.query("ROLLBACK");
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
       return res.status(400).json({ message: "Invalid gold weight" });
     }
 
-    const eligibleAmount = totalWeight * goldRate;
-    const isSpecialLoan = Number(loan_amount) > 40000;
-    const loan_type = isSpecialLoan ? 'special' : 'normal';
+    const branch_id = req.user.branch_id;
+    const created_by = req.user.id;
+    const createdAt = loan_date ? new Date(loan_date) : new Date();
 
-    let { custom_rate } = req.body;
+    const isSpecialLoan = loanAmount > 40000;
+    const loan_type = isSpecialLoan ? "special" : "normal";
 
-    if (custom_rate !== undefined && custom_rate !== null && custom_rate !== "") {
-      const cr = parseFloat(custom_rate);
-      if (cr < 0 || cr >= 60) {
-        await pool.query("ROLLBACK");
-        return res.status(400).json({ message: "Interest rate must be >= 0 and < 60" });
+    const dynamicInterestRate = getInterestRate(loanAmount, customRateValue);
+
+    const loan = await withTransaction(async (client) => {
+      // Check duplicate loan number
+      const dupCheck = await client.query(
+        "SELECT id FROM loans WHERE loan_number = $1",
+        [loanNumber]
+      );
+      if (dupCheck.rows.length > 0) {
+        throw new HttpError(400, { message: "Loan number already exists" });
       }
-    }
 
-    const dynamicInterestRate = getInterestRate(
-      Number(loan_amount),
-      custom_rate !== "" ? custom_rate : null
-    );
+      // Get latest gold rate (legacy check)
+      const settingsResult = await client.query(
+        "SELECT gold_rate FROM settings ORDER BY id DESC LIMIT 1"
+      );
+      if (settingsResult.rows.length === 0) {
+        throw new HttpError(400, { message: "Gold rate not configured" });
+      }
 
-    // Insert loan
-    const loanResult = await pool.query(
-      `INSERT INTO loans
-      (loan_number, customer_name, phone, address, items,
-       gold_weight, eligible_amount, gold_rate_used, branch_id, created_by,
-       loan_amount, interest_rate, loan_type, custom_interest_rate, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-      RETURNING *`,
-      [
-        loan_number,
-        customer_name,
-        phone,
-        address,
-        JSON.stringify(items),
-        totalWeight,
-        eligibleAmount,
-        goldRate,
-        branch_id,
-        created_by,
-        Number(loan_amount),
-        dynamicInterestRate,
-        loan_type,
-        (custom_rate !== undefined && custom_rate !== null && custom_rate !== "")
-          ? parseFloat(custom_rate) : null,
-        createdAt
-      ]
-    );
+      // Get latest gold rate
+      const goldRateResult = await client.query(
+        `SELECT gold_rate FROM gold_rates ORDER BY effective_from DESC LIMIT 1`
+      );
+      if (goldRateResult.rows.length === 0) {
+        throw new HttpError(400, { message: "Gold rate not set. Owner must set gold rate first." });
+      }
 
-    const loan = loanResult.rows[0];
+      const goldRate = goldRateResult.rows[0].gold_rate;
+      const eligibleAmount = totalWeight * goldRate;
 
-    // Insert disbursement
-    await pool.query(
-      `INSERT INTO loan_disbursements (loan_id, amount) VALUES ($1, $2)`,
-      [loan.id, Number(loan_amount)]
-    );
+      // Insert loan
+      const loanResult = await client.query(
+        `INSERT INTO loans
+        (loan_number, customer_name, phone, address, items,
+         gold_weight, eligible_amount, gold_rate_used, branch_id, created_by,
+         loan_amount, interest_rate, loan_type, custom_interest_rate, created_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+        RETURNING *`,
+        [
+          loanNumber,
+          customer_name,
+          phone,
+          address,
+          JSON.stringify(items),
+          totalWeight,
+          eligibleAmount,
+          goldRate,
+          branch_id,
+          created_by,
+          loanAmount,
+          dynamicInterestRate,
+          loan_type,
+          customRateValue,
+          createdAt
+        ]
+      );
 
-    // Log activity
-    await logActivity({
+      const newLoan = loanResult.rows[0];
+
+      // Insert disbursement (dated on the loan date, so back-dated
+      // loans accrue interest from the right day)
+      await client.query(
+        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
+         VALUES ($1, $2, $3)`,
+        [newLoan.id, loanAmount, createdAt]
+      );
+
+      return newLoan;
+    });
+
+    // Log only AFTER commit: the audit logger uses its own connection and
+    // could not see the uncommitted loan row inside the transaction.
+    await safeLogActivity({
       userId: req.user.id,
-      action: `Created loan ${loan_number}`,
+      action: `Created loan ${loanNumber}`,
       loanId: loan.id,
       branchId: branch_id
     });
 
-    await pool.query("COMMIT");
-
     res.json({ message: "Loan created successfully", loan });
 
   } catch (err) {
-    await pool.query("ROLLBACK");
-    console.error("Create Loan Error:", err);
-    res.status(500).json({ error: err.message });
+    // Two requests with the same loan number at the same moment
+    if (err.code === "23505" && /loan_number/.test(`${err.constraint || ""} ${err.detail || ""}`)) {
+      return res.status(400).json({ message: "Loan number already exists" });
+    }
+    return sendError(res, err, "Create Loan Error:");
   }
 };
-
-
 
 exports.searchLoans = async (req, res) => {
   try {
@@ -290,130 +528,160 @@ exports.getLoanById = async (req, res) => {
 
 
 
+
 exports.addPayment = async (req, res) => {
   try {
     const { id } = req.params;
     let { amount_paid, payment_type } = req.body;
 
-    amount_paid = parseFloat(amount_paid);
-    payment_type = payment_type || "installment"; // default
+    amount_paid = Number(amount_paid);
+    payment_type = payment_type || "installment";
 
-    if (!amount_paid || amount_paid <= 0) {
-      return res.status(400).json({ message: "Invalid payment amount" });
+    if (!Number.isFinite(amount_paid) || amount_paid <= 0) {
+      return res.status(400).json({
+        message: "Invalid payment amount"
+      });
     }
 
     if (!["installment", "interest", "close"].includes(payment_type)) {
-      return res.status(400).json({ message: "Invalid payment type" });
+      return res.status(400).json({
+        message: "Invalid payment type"
+      });
     }
 
-    const loanResult = await pool.query(
-      "SELECT * FROM loans WHERE id = $1", [id]
-    );
+    amount_paid = round2(amount_paid);
 
-    if (loanResult.rows.length === 0)
-      return res.status(404).json({ message: "Loan not found" });
-
-    const loan = loanResult.rows[0];
-
-    if (loan.status === "closed")
-      return res.status(400).json({ message: "Loan already closed" });
-
-    // ── Get remaining principal ──
-    const principalResult = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total FROM loan_disbursements WHERE loan_id = $1`, [id]
-    );
-    const totalPrincipal = parseFloat(principalResult.rows[0].total);
-
-    const principalPaidResult = await pool.query(
-      `SELECT COALESCE(SUM(principal_paid),0) as total FROM payments WHERE loan_id = $1`, [id]
-    );
-    const principalAlreadyPaid = parseFloat(principalPaidResult.rows[0].total);
-    let remainingPrincipal = parseFloat((totalPrincipal - principalAlreadyPaid).toFixed(2));
-
-    // ── Calculate interest due ──
-    const today = new Date();
-    const creationDate = new Date(loan.created_at);
-    let monthsElapsed = (today.getFullYear() - creationDate.getFullYear()) * 12
-      + (today.getMonth() - creationDate.getMonth());
-    if (today.getDate() < creationDate.getDate()) monthsElapsed--;
-    if (monthsElapsed < 0) monthsElapsed = 0;
-
-    const interestRate = getUpdatedInterest(loan.interest_rate, monthsElapsed, loan.loan_amount);
-
-    const lastPaymentResult = await pool.query(
-      `SELECT created_at FROM payments WHERE loan_id = $1 ORDER BY created_at DESC LIMIT 1`, [id]
-    );
-    const fromDate = lastPaymentResult.rows.length
-      ? new Date(lastPaymentResult.rows[0].created_at)
-      : new Date(loan.created_at);
-
-    const diffDays = Math.ceil((today - fromDate) / (1000 * 60 * 60 * 24));
-    let interestDue = parseFloat(
-      ((remainingPrincipal * interestRate * diffDays) / 36500).toFixed(2)
-    );
-
-    let interestPaid = 0;
-    let principalPaid = 0;
-    let closed = false;
-
-    // ── Apply payment based on type ──
-    if (payment_type === "interest") {
-      // Only pay interest — principal untouched
-      interestPaid = Math.min(amount_paid, interestDue);
-      principalPaid = 0;
-
-    } else if (payment_type === "installment") {
-      // Existing logic: interest first, then principal
-      interestPaid = Math.min(amount_paid, interestDue);
-      const remaining = amount_paid - interestPaid;
-      principalPaid = Math.min(remaining, remainingPrincipal);
-
-    } else if (payment_type === "close") {
-      // Full settlement — clear everything
-      interestPaid = Math.min(amount_paid, interestDue);
-      const remaining = amount_paid - interestPaid;
-      principalPaid = Math.min(remaining, remainingPrincipal);
-      closed = true; // force close regardless
-    }
-
-    interestPaid = parseFloat(interestPaid.toFixed(2));
-    principalPaid = parseFloat(principalPaid.toFixed(2));
-    remainingPrincipal = parseFloat((remainingPrincipal - principalPaid).toFixed(2));
-
-    // ── Insert payment record ──
-    await pool.query(
-      `INSERT INTO payments
-       (loan_id, amount_paid, interest_paid, principal_paid, received_by, payment_type)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, interestPaid + principalPaid, interestPaid, principalPaid, req.user.id, payment_type]
-    );
-
-    // ── Close loan if needed ──
-    if (closed || remainingPrincipal <= 0.01) {
-      await pool.query(
-        `UPDATE loans SET status = 'closed', closed_at = NOW() WHERE id = $1`, [id]
+    const outcome = await withTransaction(async (client) => {
+      // 1. Fetch and lock the loan so two payments can't run at once
+      const loanResult = await client.query(
+        "SELECT * FROM loans WHERE id = $1 FOR UPDATE",
+        [id]
       );
-      closed = true;
-    }
 
-    await logActivity({
+      if (loanResult.rows.length === 0) {
+        throw new HttpError(404, { message: "Loan not found" });
+      }
+
+      const loan = loanResult.rows[0];
+
+      if (loan.status !== "active") {
+        throw new HttpError(400, {
+          message: "Only active loans can receive payments"
+        });
+      }
+
+      // 2. Interest + principal from the shared calculation
+      const ledger = await getLoanLedger(client, id);
+      const calc = computeLoanInterest(loan, ledger);
+
+      if (calc.remainingPrincipal <= 0) {
+        throw new HttpError(400, {
+          message: "No outstanding principal remains"
+        });
+      }
+
+      const interestDue = calc.interestDue;
+      let remainingPrincipal = calc.remainingPrincipal;
+
+      let interestPaid = 0;
+      let principalPaid = 0;
+      let closed = false;
+
+      // 3. Apply payment
+      if (payment_type === "interest") {
+        interestPaid = Math.min(amount_paid, interestDue);
+      } else if (payment_type === "installment") {
+        interestPaid = Math.min(amount_paid, interestDue);
+
+        const amountLeft = round2(amount_paid - interestPaid);
+
+        principalPaid = Math.min(amountLeft, remainingPrincipal);
+      } else if (payment_type === "close") {
+        // Require enough money to settle interest and principal.
+        const settlementAmount = round2(interestDue + remainingPrincipal);
+
+        if (amount_paid + 0.001 < settlementAmount) {
+          throw new HttpError(400, {
+            message: "Insufficient amount to close the loan",
+            interestDue,
+            remainingPrincipal,
+            settlementAmount
+          });
+        }
+
+        interestPaid = interestDue;
+        principalPaid = remainingPrincipal;
+        closed = true;
+      }
+
+      interestPaid = round2(interestPaid);
+      principalPaid = round2(principalPaid);
+
+      remainingPrincipal = round2(
+        Math.max(remainingPrincipal - principalPaid, 0)
+      );
+
+      // 4. Save payment
+      await client.query(
+        `INSERT INTO payments
+         (loan_id, amount_paid, interest_paid, principal_paid,
+          received_by, payment_type)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          id,
+          round2(interestPaid + principalPaid),
+          interestPaid,
+          principalPaid,
+          req.user.id,
+          payment_type
+        ]
+      );
+
+      // 5. Close loan if fully settled
+      if (closed || remainingPrincipal <= 0.01) {
+        await client.query(
+          `UPDATE loans
+           SET status = 'closed', closed_at = NOW()
+           WHERE id = $1`,
+          [id]
+        );
+
+        closed = true;
+      }
+
+      return {
+        loan,
+        interestRate: calc.rate,
+        interestDue,
+        interestPaid,
+        principalPaid,
+        remainingPrincipal,
+        closed
+      };
+    });
+
+    // 6. Record activity (after commit)
+    await safeLogActivity({
       userId: req.user.id,
-      action: `Payment (${payment_type}) on loan ${loan.loan_number} — ₹${interestPaid + principalPaid}`,
-      loanId: loan.id,
-      branchId: loan.branch_id
+      action: `Payment (${payment_type}) on loan ${outcome.loan.loan_number} — ₹${(
+        outcome.interestPaid + outcome.principalPaid
+      ).toFixed(2)}`,
+      loanId: outcome.loan.id,
+      branchId: outcome.loan.branch_id
     });
 
     res.json({
       message: "Payment added successfully",
-      interestPaid,
-      principalPaid,
-      remainingPrincipal,
-      closed
+      interestRate: outcome.interestRate,
+      interestDue: outcome.interestDue,
+      interestPaid: outcome.interestPaid,
+      principalPaid: outcome.principalPaid,
+      remainingPrincipal: outcome.remainingPrincipal,
+      closed: outcome.closed
     });
 
   } catch (err) {
-    console.error("Payment error:", err.message);
-    res.status(500).json({ error: err.message });
+    return sendError(res, err, "Payment error:");
   }
 };
 
@@ -435,167 +703,162 @@ exports.getLoanPayments = async (req, res) => {
 };
 
 
+
 exports.renewLoan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { new_loan_number } = req.body;
+    const new_loan_number = String(
+      req.body.new_loan_number || ""
+    ).trim();
 
-    if (!new_loan_number || new_loan_number.trim() === "") {
-      return res.status(400).json({ message: "New loan number is required" });
-    }
-
-    await pool.query("BEGIN");
-
-    // Check duplicate newly assigned loan number
-    const dupCheck = await pool.query(
-      "SELECT id FROM loans WHERE loan_number = $1",
-      [new_loan_number]
-    );
-    if (dupCheck.rows.length > 0) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({ message: "Loan number already exists" });
-    }
-
-    // 1️⃣ Get old loan
-    const loanResult = await pool.query(
-      `SELECT * FROM loans WHERE id = $1`,
-      [id]
-    );
-
-    if (loanResult.rows.length === 0) {
-      await pool.query("ROLLBACK");
-      return res.status(404).json({ message: "Loan not found" });
-    }
-
-    const oldLoan = loanResult.rows[0];
-
-    if (oldLoan.status !== "active") {
-      await pool.query("ROLLBACK");
+    if (!new_loan_number) {
       return res.status(400).json({
-        message: "Only active loans can be renewed"
+        message: "New loan number is required"
       });
     }
 
-    // 2️⃣ Get total principal
-    const principalResult = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total
-       FROM loan_disbursements
-       WHERE loan_id = $1`,
-      [id]
-    );
+    const result = await withTransaction(async (client) => {
+      // 1. Fetch and lock old loan
+      const loanResult = await client.query(
+        `SELECT *
+         FROM loans
+         WHERE id = $1
+         FOR UPDATE`,
+        [id]
+      );
 
-    const totalPrincipal = Number(principalResult.rows[0].total);
+      if (loanResult.rows.length === 0) {
+        throw new HttpError(404, { message: "Loan not found" });
+      }
 
-    // 3️⃣ Get total principal paid
-    const paidResult = await pool.query(
-      `SELECT COALESCE(SUM(principal_paid),0) as total
-       FROM payments
-       WHERE loan_id = $1`,
-      [id]
-    );
+      const oldLoan = loanResult.rows[0];
 
-    const principalPaid = Number(paidResult.rows[0].total);
+      if (oldLoan.status !== "active") {
+        throw new HttpError(400, {
+          message: "Only active loans can be renewed"
+        });
+      }
 
-    const remainingPrincipal = Math.max(
-      totalPrincipal - principalPaid,
-      0
-    );
+      // 2. Check duplicate loan number
+      const dupCheck = await client.query(
+        `SELECT id
+         FROM loans
+         WHERE loan_number = $1`,
+        [new_loan_number]
+      );
 
-    if (remainingPrincipal <= 0) {
-      await pool.query("ROLLBACK");
-      return res.status(400).json({
-        message: "Loan fully paid. Cannot renew."
-      });
-    }
+      if (dupCheck.rows.length > 0) {
+        throw new HttpError(400, {
+          message: "Loan number already exists"
+        });
+      }
 
-    // 4️⃣ Calculate live interest till today
-    const startDate = new Date(oldLoan.created_at);
-    const today = new Date();
+      // 3. Principal + interest from the shared calculation
+      //    (same numbers the loan screen and addPayment use)
+      const ledger = await getLoanLedger(client, id);
+      const calc = computeLoanInterest(oldLoan, ledger);
 
-    startDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
+      if (calc.remainingPrincipal <= 0) {
+        throw new HttpError(400, {
+          message: "Loan fully paid. Cannot renew."
+        });
+      }
 
-    let diffDays = Math.floor(
-      (today - startDate) / (1000 * 60 * 60 * 24)
-    );
+      const rate = calc.rate;
+      const liveInterest = calc.interestDue;
 
-    if (diffDays < 1) diffDays = 1;
+      // 4. Capitalize interest
+      const newPrincipal = round2(calc.remainingPrincipal + liveInterest);
 
-    let monthsElapsed = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
-    if (today.getDate() < startDate.getDate()) {
-      monthsElapsed--;
-    }
-    if (monthsElapsed < 0) monthsElapsed = 0;
+      // 5. Mark old loan as renewed
+      await client.query(
+        `UPDATE loans
+         SET status = 'renewed'
+         WHERE id = $1`,
+        [id]
+      );
 
-    const rate = getUpdatedInterest(oldLoan.interest_rate, monthsElapsed, oldLoan.loan_amount);
+      // 6. Create new loan
+      const newLoanResult = await client.query(
+        `INSERT INTO loans
+         (
+           loan_number,
+           customer_name,
+           phone,
+           address,
+           items,
+           gold_weight,
+           eligible_amount,
+           gold_rate_used,
+           branch_id,
+           created_by,
+           parent_loan_id,
+           interest_rate,
+           loan_amount,
+           loan_type
+         )
+         VALUES (
+           $1, $2, $3, $4, $5, $6, $7,
+           $8, $9, $10, $11, $12, $13, $14
+         )
+         RETURNING *`,
+        [
+          new_loan_number,
+          oldLoan.customer_name,
+          oldLoan.phone,
+          oldLoan.address,
+          JSON.stringify(oldLoan.items),
+          oldLoan.gold_weight,
+          oldLoan.eligible_amount,
+          oldLoan.gold_rate_used,
+          oldLoan.branch_id,
+          req.user.id,
+          oldLoan.id,
+          rate,
+          newPrincipal,
+          oldLoan.loan_type
+        ]
+      );
 
-    const liveInterest =
-      (remainingPrincipal * rate * diffDays) / 36500;
+      const newLoan = newLoanResult.rows[0];
 
-    // 5️⃣ Capitalize interest
-    const newPrincipal = Math.round(
-      remainingPrincipal + liveInterest
-    );
+      // 7. Add new principal as a disbursement (dated like the new loan)
+      await client.query(
+        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
+         VALUES ($1, $2, $3)`,
+        [newLoan.id, newPrincipal, newLoan.created_at]
+      );
 
-    // 6️⃣ Mark old loan as renewed
-    await pool.query(
-      `UPDATE loans SET status = 'renewed'
-       WHERE id = $1`,
-      [id]
-    );
+      return { oldLoan, newLoan, calc, rate, liveInterest, newPrincipal };
+    });
 
-    // 7️⃣ Create new loan using provided loan number
-    const newLoanResult = await pool.query(
-      `INSERT INTO loans
-      (loan_number, customer_name, phone, address, items,
-        gold_weight, eligible_amount,
-        gold_rate_used, branch_id, created_by,
-        parent_loan_id, interest_rate, loan_amount, loan_type)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-      RETURNING *`,
-      [
-        new_loan_number,
-        oldLoan.customer_name,
-        oldLoan.phone,
-        oldLoan.address,
-        JSON.stringify(oldLoan.items),
-        oldLoan.gold_weight,
-        oldLoan.eligible_amount,
-        oldLoan.gold_rate_used,
-        oldLoan.branch_id,
-        req.user.id,
-        oldLoan.id,
-        rate,
-        newPrincipal,
-        oldLoan.loan_type
-      ]
-    );
+    // 8. Log activity after successful commit
+    await safeLogActivity({
+      userId: req.user.id,
+      action:
+        `Loan ${result.oldLoan.loan_number} renewed as ${new_loan_number}`,
+      loanId: result.newLoan.id,
+      branchId: result.oldLoan.branch_id
+    });
 
-
-    const newLoan = newLoanResult.rows[0];
-
-    // 9️⃣ Insert new principal as disbursement
-    await pool.query(
-      `INSERT INTO loan_disbursements (loan_id, amount)
-       VALUES ($1, $2)`,
-      [newLoan.id, newPrincipal]
-    );
-
-    await pool.query("COMMIT");
-
-    res.json({
+    return res.json({
       message: "Loan renewed successfully",
-      newLoan,
-      capitalizedInterest: Number(liveInterest.toFixed(2)),
-      newPrincipal
+      newLoan: result.newLoan,
+      interestRate: result.rate,
+      days: result.calc.days,
+      monthsElapsed: result.calc.monthsElapsed,
+      capitalizedInterest: result.liveInterest,
+      newPrincipal: result.newPrincipal
     });
 
   } catch (err) {
-    await pool.query("ROLLBACK");
-    console.error("Renew Error:", err);
-    res.status(500).json({ error: err.message });
+    if (err.code === "23505" && /loan_number/.test(`${err.constraint || ""} ${err.detail || ""}`)) {
+      return res.status(400).json({ message: "Loan number already exists" });
+    }
+    return sendError(res, err, "Renew Error:");
   }
 };
+
 
 exports.getRenewedLoan = async (req, res) => {
   try {
@@ -980,23 +1243,40 @@ exports.staffDateSummary = async (req, res) => {
   }
 };
 
+
 exports.ownerActivityLogs = async (req, res) => {
   try {
     if (req.user.role !== "owner") {
-      return res.status(403).json({ message: "Only owner allowed" });
+      return res.status(403).json({
+        message: "Only owner allowed",
+      });
     }
 
-    const result = await pool.query(
-      `SELECT a.*, u.name
-       FROM activity_logs a
-       JOIN users u ON a.user_id = u.id
-       ORDER BY a.created_at DESC
-       LIMIT 100`
-    );
+    const result = await pool.query(`
+      SELECT
+        a.id,
+        a.user_id,
+        a.action,
+        a.loan_id,
+        COALESCE(a.branch_id, l.branch_id) AS branch_id,
+        b.name AS branch_name,
+        u.name AS name,
+        l.loan_number AS loan_number,
+        a.created_at
+      FROM activity_logs a
+      JOIN users u
+        ON a.user_id = u.id
+      LEFT JOIN loans l
+        ON a.loan_id = l.id
+      LEFT JOIN branches b
+        ON b.id = COALESCE(a.branch_id, l.branch_id)
+      ORDER BY a.created_at DESC
+      LIMIT 100
+    `);
 
     res.json(result.rows);
-
   } catch (err) {
+    console.error("Owner Activity Logs Error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -1024,16 +1304,78 @@ exports.getTermOverLoans = async (req, res) => {
 exports.addTopUp = async (req, res) => {
   try {
     const { id } = req.params;
-    const { extra_amount } = req.body;
+    const extraAmount = Number(req.body.extra_amount);
 
-    if (!extra_amount || extra_amount <= 0) {
+    if (!Number.isFinite(extraAmount) || extraAmount <= 0) {
       return res.status(400).json({
         message: "Invalid extra amount"
       });
     }
 
+    await withTransaction(async (client) => {
+      // Lock the loan so concurrent top-ups can't both pass the limit check
+      const loanResult = await client.query(
+        "SELECT * FROM loans WHERE id = $1 FOR UPDATE",
+        [id]
+      );
+
+      if (loanResult.rows.length === 0) {
+        throw new HttpError(404, { message: "Loan not found" });
+      }
+
+      const loan = loanResult.rows[0];
+
+      if (loan.status !== "active") {
+        throw new HttpError(400, { message: "Loan not active" });
+      }
+
+      // Get total already disbursed
+      const totalResult = await client.query(
+        `SELECT COALESCE(SUM(amount),0) as total
+         FROM loan_disbursements
+         WHERE loan_id = $1`,
+        [id]
+      );
+
+      const currentPrincipal = Number(totalResult.rows[0].total);
+
+      // Check eligible limit
+      if (
+        loan.loan_type !== "special" &&
+        currentPrincipal + extraAmount > Number(loan.eligible_amount)
+      ) {
+        throw new HttpError(400, { message: "Exceeds eligible loan amount" });
+      }
+
+      // Insert top-up. The date is stored explicitly: interest on this
+      // amount starts from THIS day, not from the original loan date.
+      await client.query(
+        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
+         VALUES ($1, $2, NOW())`,
+        [id, round2(extraAmount)]
+      );
+    });
+
+    res.json({
+      message: "Top-up added successfully"
+    });
+
+  } catch (err) {
+    return sendError(res, err, "Top-up error:");
+  }
+};
+
+
+
+exports.calculateInterest = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Fetch loan details
     const loanResult = await pool.query(
-      "SELECT * FROM loans WHERE id = $1",
+      `SELECT id, interest_rate, created_at, loan_amount
+       FROM loans
+       WHERE id = $1`,
       [id]
     );
 
@@ -1045,129 +1387,27 @@ exports.addTopUp = async (req, res) => {
 
     const loan = loanResult.rows[0];
 
-    if (loan.status !== "active") {
-      return res.status(400).json({
-        message: "Loan not active"
-      });
-    }
+    // 2. Same calculation that addPayment and renewLoan use
+    const ledger = await getLoanLedger(pool, id);
+    const calc = computeLoanInterest(loan, ledger);
 
-    // Get total already disbursed
-    const totalResult = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total
-       FROM loan_disbursements
-       WHERE loan_id = $1`,
-      [id]
-    );
-
-    const currentPrincipal = Number(totalResult.rows[0].total);
-
-    // Check eligible limit
-    if (loan.loan_type !== 'special' && (currentPrincipal + Number(extra_amount) > loan.eligible_amount)) {
-      return res.status(400).json({
-        message: "Exceeds eligible loan amount"
-      });
-    }
-
-    // Insert top-up
-    await pool.query(
-      `INSERT INTO loan_disbursements (loan_id, amount)
-       VALUES ($1, $2)`,
-      [id, extra_amount]
-    );
-
+    // 3. Return the result
+    //    interest = what is actually due right now (accrued - already paid)
     res.json({
-      message: "Top-up added successfully"
+      remainingPrincipal: calc.remainingPrincipal,
+      days: calc.days,
+      monthsElapsed: calc.monthsElapsed,
+      interestRate: calc.rate,
+      accruedInterest: calc.accruedInterest,
+      interestPaid: calc.interestPaidTotal,
+      interest: calc.interestDue
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return sendError(res, err, "Interest Error:");
   }
 };
 
-
-
-exports.calculateInterest = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Fetch loan
-    const loanResult = await pool.query(
-      `SELECT id, interest_rate, created_at, loan_amount
-       FROM loans
-       WHERE id = $1`,
-      [id]
-    );
-
-    if (loanResult.rows.length === 0) {
-      return res.status(404).json({ message: "Loan not found" });
-    }
-
-    const loan = loanResult.rows[0];
-
-    console.log("Created At from DB:", loan.created_at);
-
-    // Fetch total principal
-    const principalResult = await pool.query(
-      `SELECT COALESCE(SUM(amount),0) as total
-       FROM loan_disbursements
-       WHERE loan_id = $1`,
-      [id]
-    );
-
-    const totalPrincipal = Number(principalResult.rows[0].total);
-
-    // Fetch total principal paid
-    const paidResult = await pool.query(
-      `SELECT COALESCE(SUM(principal_paid),0) as total
-       FROM payments
-       WHERE loan_id = $1`,
-      [id]
-    );
-
-    const principalPaid = Number(paidResult.rows[0].total);
-
-    const remainingPrincipal = Math.max(
-      totalPrincipal - principalPaid,
-      0
-    );
-
-    // Date calculation using created_at
-    const startDate = new Date(loan.created_at);
-    const today = new Date();
-
-    startDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-
-    let diffDays = Math.floor(
-      (today - startDate) / (1000 * 60 * 60 * 24)
-    );
-
-    // Minimum 1 day rule (optional)
-    if (diffDays < 1) diffDays = 1;
-
-    let monthsElapsed = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
-    if (today.getDate() < startDate.getDate()) {
-      monthsElapsed--;
-    }
-    if (monthsElapsed < 0) monthsElapsed = 0;
-
-    // Interest calculation
-    const rate = getUpdatedInterest(loan.interest_rate, monthsElapsed, loan.loan_amount);
-
-    const interest =
-      (remainingPrincipal * rate * diffDays) / 36500;
-
-    res.json({
-      remainingPrincipal,
-      days: diffDays,
-      interest: Number(interest.toFixed(2)),
-    });
-
-  } catch (err) {
-    console.error("Interest Error:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
 
 
 

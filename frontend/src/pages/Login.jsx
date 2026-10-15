@@ -273,7 +273,7 @@ export default function Login() {
       display: inline-flex; align-items: center;
       padding: 3px 9px;
       border-radius: 4px;
-      font-size: 9px; font-weight: 700;
+      font-size: 14px; font-weight: 700;
       letter-spacing: .1em; text-transform: uppercase;
       background: rgba(212,175,55,.15);
       color: #D4AF37;
@@ -291,7 +291,7 @@ export default function Login() {
       z-index: 1;
     }
     .lr-tagline {
-      font-size: 10px; font-weight: 600;
+      font-size: 14px; font-weight: 600;
       letter-spacing: .15em; text-transform: uppercase;
       color: #D4AF37;
       margin-bottom: 14px;
@@ -343,13 +343,13 @@ export default function Login() {
       transition: background .2s;
     }
     .lr-feat:hover .lr-feat-icon { background: rgba(139,0,0,.35); }
-    .lr-feat-label { font-size: 13px; font-weight: 600; color: #F5EDD6; }
-    .lr-feat-desc  { font-size: 12px; color: rgba(245,237,214,.45); margin-top: 1px; }
+    .lr-feat-label { font-size: 16px; font-weight: 600; color: #F5EDD6; }
+    .lr-feat-desc  { font-size: 16px; color: rgba(245,237,214,.45); margin-top: 1px; }
 
     /* Left footer */
     .lr-footer {
       display: flex; align-items: center; gap: 7px;
-      font-size: 11px; color: rgba(245,237,214,.3);
+      font-size: 14px; color: rgba(245,237,214,.3);
       position: relative; z-index: 1;
     }
 
@@ -373,7 +373,7 @@ export default function Login() {
     /* Back button */
     .lr-back {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 13px; font-weight: 500;
+      font-size: 17px; font-weight: 500;
       color: #999;
       background: none; border: none;
       cursor: pointer; padding: 0;
@@ -385,7 +385,7 @@ export default function Login() {
     /* Form head */
     .lr-eyebrow {
       display: flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 700;
+      font-size: 16px; font-weight: 700;
       letter-spacing: .12em; text-transform: uppercase;
       color: #8B0000;
       margin-bottom: 8px;
@@ -412,7 +412,7 @@ export default function Login() {
       border: 1px solid #F5C2C2;
       border-radius: 8px;
       padding: 12px 14px;
-      font-size: 13px;
+      font-size: 16px;
       color: #991B1B;
       margin-bottom: 20px;
       line-height: 1.5;
@@ -422,7 +422,7 @@ export default function Login() {
     .lr-fields { display: flex; flex-direction: column; gap: 18px; }
     .lr-field  { display: flex; flex-direction: column; gap: 7px; }
     .lr-field label {
-      font-size: 13px; font-weight: 600;
+      font-size: 16px; font-weight: 600;
       color: #4A3030;
       letter-spacing: .01em;
     }
@@ -553,7 +553,7 @@ export default function Login() {
     .lr-secure {
       margin-top: 20px;
       text-align: center;
-      font-size: 12px;
+      font-size: 14px;
       color: #B5A0A0;
       display: flex;
       align-items: center;
@@ -576,7 +576,7 @@ export default function Login() {
         padding: 28px 20px 24px;
       }
       .lr-hero { padding: 16px 0 8px; }
-      .lr-sub  { font-size: 13px; margin-bottom: 20px; max-width: 100%; }
+      .lr-sub  { font-size: 17px; margin-bottom: 20px; max-width: 100%; }
       .lr-right {
         flex: 1;
         padding: 28px 20px 32px;
@@ -596,8 +596,8 @@ export default function Login() {
       .lr-features { gap: 8px; }
       .lr-feat  { padding: 10px 12px; }
       .lr-feat-icon { width: 30px; height: 30px; }
-      .lr-feat-label { font-size: 12px; }
-      .lr-feat-desc  { font-size: 11px; }
+      .lr-feat-label { font-size: 16px; }
+      .lr-feat-desc  { font-size: 16px; }
       .lr-right { padding: 20px 16px 28px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
       .lr-form-title { font-size: 26px; }
       .lr-btn   { font-size: 15px; min-height: 50px; }

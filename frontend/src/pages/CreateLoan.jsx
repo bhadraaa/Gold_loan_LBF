@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../axiosConfig";
 import "../styles/gl.css";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.css";
 
 function CreateLoan() {
   const [customerName, setCustomerName] = useState("");
@@ -121,14 +123,15 @@ function CreateLoan() {
         {/* ── Loan Number ── */}
         <div className="gl-card" style={{ marginBottom: 16 }}>
           <div className="gl-field">
-            <label className="gl-label">Loan Number</label>
+            <label className="gl-section-label">Loan Number</label>
             <input
               className="gl-input"
-              placeholder=""
+              placeholder="Existing loan Number"
               value={loanNumber}
               onChange={e => setLoanNumber(e.target.value)}
-              style={{ fontFamily: "var(--mono)", fontSize: 14 }}
+             
             />
+        
           </div>
         </div>
 
@@ -237,11 +240,17 @@ function CreateLoan() {
           <div className="gl-section-label">Loan details</div>
           <div className="gl-field">
             <label className="gl-label">Loan Date</label>
-            <input
-              className="gl-input"
-              type="date"
+            <Flatpickr
+              className="gl-input custom-big-calendar"
               value={loanDate}
-              onChange={e => setLoanDate(e.target.value)}
+              onChange={([date]) => {
+                // Formats the date back to YYYY-MM-DD to match your state variable
+                const formattedDate = date.toISOString().split('T')[0];
+                setLoanDate(formattedDate);
+              }}
+              options={{
+                dateFormat: "d-m-Y", // Matches the DD-MM-YYYY format in your image
+              }}
             />
           </div>
           <div className="gl-field">

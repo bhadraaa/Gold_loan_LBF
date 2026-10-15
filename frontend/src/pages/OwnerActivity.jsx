@@ -2,6 +2,8 @@ import { useEffect, useState, Fragment } from "react";
 import "../styles/gl.css";
 import { Link } from "react-router-dom";
 import api from "../axiosConfig";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.css";
 
 function OwnerActivity() {
   const [logs, setLogs] = useState([]);
@@ -31,7 +33,11 @@ function OwnerActivity() {
       l.name?.toLowerCase().includes(search.toLowerCase()) ||
       l.action?.toLowerCase().includes(search.toLowerCase())
     );
-    if (branchFilter) f = f.filter(l => l.branch_name === branchFilter);
+    if (branchFilter) {
+      f = f.filter(
+        l => String(l.branch_id) === String(branchFilter)
+      );
+    }
     if (fromDate) f = f.filter(l => new Date(l.created_at) >= new Date(fromDate));
     if (toDate) f = f.filter(l => new Date(l.created_at) <= new Date(toDate + "T23:59:59"));
     setFilteredLogs(f);
@@ -81,20 +87,52 @@ function OwnerActivity() {
 
             <div className="gl-field">
               <label className="gl-label">Branch</label>
-              <select className="gl-select" value={branchFilter} onChange={e => setBranchFilter(e.target.value)}>
+              <select
+                className="gl-select"
+                value={branchFilter}
+                onChange={e => setBranchFilter(e.target.value)}
+              >
                 <option value="">All branches</option>
-                {allBranches.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
+
+                {allBranches.map(b => (
+                  <option key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div className="gl-field">
               <label className="gl-label">From</label>
-              <input type="date" className="gl-input" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              
+              <Flatpickr
+                className="gl-input custom-big-calendar"
+                value={fromDate}
+                onChange={([date]) => {
+                  // Formats the date back to YYYY-MM-DD to match your state variable
+                  const formattedDate = date.toISOString().split('T')[0];
+                  setFromDate(formattedDate);
+                }}
+                options={{
+                  dateFormat: "d-m-Y", // Matches the DD-MM-YYYY format in your image
+                }}
+              />
             </div>
 
             <div className="gl-field">
               <label className="gl-label">To</label>
-              <input type="date" className="gl-input" value={toDate} onChange={e => setToDate(e.target.value)} />
+              <Flatpickr
+                className="gl-input custom-big-calendar"
+                value={toDate}
+                onChange={([date]) => {
+          
+                  const formattedDate = date.toISOString().split('T')[0];
+                  setToDate(formattedDate);
+                }}
+                options={{
+                  dateFormat: "d-m-Y", 
+                }}
+              />
             </div>
           </div>
         </div>

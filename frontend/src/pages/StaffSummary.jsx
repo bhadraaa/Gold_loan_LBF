@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "../styles/gl.css";
 import api from "../axiosConfig";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.css";
 
 function StaffSummary() {
   const [data, setData] = useState(null);
@@ -45,15 +47,31 @@ function StaffSummary() {
             <div className="gl-subtitle">Financial breakdown for selected date</div>
           </div>
           <div className="gl-search" style={{ width: 220 }}>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-                fetchSummary(e.target.value);
-              }}
-              style={{ width: "100%", padding: "8px 12px" }}
-            />
+           <Flatpickr
+            className="custom-big-calendar"
+            value={selectedDate}
+            onChange={([date]) => {
+              if (date) {
+                // Safely shifts the selected date to match your local timezone offset
+                const timezoneOffset = date.getTimezoneOffset() * 60000;
+                const localDate = new Date(date.getTime() - timezoneOffset);
+                
+                // Formats the raw timestamp object straight into an ISO "YYYY-MM-DD" string
+                const formattedString = localDate.toISOString().split("T")[0];
+                
+                // Fires both updates sequentially with the clean date string
+                setSelectedDate(formattedString);
+                fetchSummary(formattedString);
+              } else {
+                setSelectedDate("");
+              }
+            }}
+            options={{
+              dateFormat: "d-m-Y", // Displays layout format (DD-MM-YYYY) in the UI field
+            }}
+            // Maintained your inline layout sizing rules here:
+            style={{ width: "100%", padding: "8px 12px" }} 
+          />
           </div>
         </div>
 

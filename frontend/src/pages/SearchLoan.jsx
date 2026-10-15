@@ -51,7 +51,7 @@ function SearchLoan() {
 
         {/* Search bar */}
         <div className="gl-search" style={{ marginBottom: 20 }}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 14, flexShrink: 0, color: "var(--txt3)" }}>
+          <svg width="50" height="50" viewBox="0 0 16 16" fill="none" style={{ marginLeft: 14, flexShrink: 0, color: "var(--txt3)" }}>
             <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
             <path d="M10.5 10.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>

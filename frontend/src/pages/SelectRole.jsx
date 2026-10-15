@@ -177,7 +177,7 @@ export default function SelectRole() {
         .sr-footer {
           margin-top: 40px;
           text-align: center;
-          font-size: 13px;
+          font-size: 17px;
           color: #B5A8A8;
           display: flex;
           align-items: center;

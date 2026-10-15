@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "../styles/gl.css";
 import api from "../axiosConfig";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.css";
 
 function OwnerDashboard() {
   const token = sessionStorage.getItem("token");
@@ -172,11 +174,45 @@ function OwnerDashboard() {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", margin: "20px 0" }}>
             <div className="gl-field" style={{ flex: 1, minWidth: 160 }}>
               <label className="gl-label">From Date</label>
-              <input type="date" className="gl-input" value={fromDate} onChange={(e) => setFromDate(e.target.value)} max={toDate || undefined} />
+              <Flatpickr
+                className="gl-input custom-big-calendar"
+                value={fromDate}
+                onChange={([selectedDate]) => {
+                  if (selectedDate) {
+                    const timezoneOffset = selectedDate.getTimezoneOffset() * 60000;
+                    const localDate = new Date(selectedDate.getTime() - timezoneOffset);
+                    const formattedString = localDate.toISOString().split("T")[0];
+                    setFromDate(formattedString);
+                  } else {
+                    setFromDate("");
+                  }
+                }}
+                options={{
+                  dateFormat: "d-m-Y",
+                  maxDate: toDate || undefined,
+                }}
+              />
             </div>
             <div className="gl-field" style={{ flex: 1, minWidth: 160 }}>
               <label className="gl-label">To Date</label>
-              <input type="date" className="gl-input" value={toDate} onChange={(e) => setToDate(e.target.value)} min={fromDate || undefined} />
+              <Flatpickr
+                className="gl-input custom-big-calendar"
+                value={toDate}
+                onChange={([selectedDate]) => {
+                  if (selectedDate) {
+                    const timezoneOffset = selectedDate.getTimezoneOffset() * 60000;
+                    const localDate = new Date(selectedDate.getTime() - timezoneOffset);
+                    const formattedString = localDate.toISOString().split("T")[0];
+                    setToDate(formattedString);
+                  } else {
+                    setToDate("");
+                  }
+                }}
+                options={{
+                  dateFormat: "d-m-Y",
+                  minDate: fromDate || undefined,
+                }}
+              />
             </div>
             <button className="gl-btn" style={{ background: "var(--navy)", color: "#FFF" }} onClick={fetchReport}>
               Generate Report
@@ -226,6 +262,7 @@ function OwnerDashboard() {
             </div>
           )}
         </div>
+
       </div>
 
       {/* Bottom Security Tag */}
