@@ -137,12 +137,12 @@ function completedMonthsBetween(startValue, endValue) {
 // db can be the pool or a transaction client.
 async function getLoanLedger(db, loanId) {
   const disbursements = await db.query(
-    `SELECT amount, created_at
-     FROM loan_disbursements
-     WHERE loan_id = $1
-     ORDER BY created_at ASC`,
-    [loanId]
-  );
+  `SELECT amount, disbursed_at
+   FROM loan_disbursements
+   WHERE loan_id = $1
+   ORDER BY disbursed_at ASC`,
+  [loanId]
+);
 
   const payments = await db.query(
     `SELECT principal_paid, interest_paid, payment_date
@@ -183,10 +183,14 @@ function computeLoanInterest(loan, ledger, asOf = new Date()) {
       // the loan date (important for back-dated loans).
       day = startDay;
     } else {
-      if (!d.created_at) {
-        throw new Error("Top-up disbursement is missing its date");
-      }
-      day = Math.min(Math.max(toDayNumber(d.created_at), startDay), endDay);
+      if (!d.disbursed_at) {
+  throw new Error("Top-up disbursement is missing its date");
+}
+
+day = Math.min(
+  Math.max(toDayNumber(d.disbursed_at), startDay),
+  endDay
+);
     }
 
     events.push({ day, delta: Number(d.amount) || 0 });
@@ -384,10 +388,10 @@ exports.createLoan = async (req, res) => {
       // Insert disbursement (dated on the loan date, so back-dated
       // loans accrue interest from the right day)
       await client.query(
-        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
-         VALUES ($1, $2, $3)`,
-        [newLoan.id, loanAmount, createdAt]
-      );
+  `INSERT INTO loan_disbursements (loan_id, amount, disbursed_at)
+   VALUES ($1, $2, $3)`,
+  [newLoan.id, loanAmount, createdAt]
+);
 
       return newLoan;
     });
@@ -824,7 +828,7 @@ exports.renewLoan = async (req, res) => {
 
       // 7. Add new principal as a disbursement (dated like the new loan)
       await client.query(
-        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
+        `INSERT INTO loan_disbursements (loan_id, amount,  disbursed_at)
          VALUES ($1, $2, $3)`,
         [newLoan.id, newPrincipal, newLoan.created_at]
       );
@@ -1350,7 +1354,7 @@ exports.addTopUp = async (req, res) => {
       // Insert top-up. The date is stored explicitly: interest on this
       // amount starts from THIS day, not from the original loan date.
       await client.query(
-        `INSERT INTO loan_disbursements (loan_id, amount, created_at)
+        `INSERT INTO loan_disbursements (loan_id, amount,  disbursed_at)
          VALUES ($1, $2, NOW())`,
         [id, round2(extraAmount)]
       );
