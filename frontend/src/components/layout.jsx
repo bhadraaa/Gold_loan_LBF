@@ -456,7 +456,7 @@ const [branchError, setBranchError] = useState("");
               }}
             >
               <img
-                src={newLogo.svg}
+                src={newLogo}
                 alt="Logo"
                 style={{
                   width: "100%",
