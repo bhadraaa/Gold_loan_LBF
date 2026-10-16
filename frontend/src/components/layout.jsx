@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { useEffect, useState } from "react";
 import api from "../axiosConfig";
-import newLogo from "../assets/NEWlogo.svg";
+import newLogo from "../assets/newLogo.svg";
 const NAV = {
   staff: [
     {
@@ -456,7 +456,7 @@ const [branchError, setBranchError] = useState("");
               }}
             >
               <img
-                src={NEWlogo.svg}
+                src={newLogo.svg}
                 alt="Logo"
                 style={{
                   width: "100%",
