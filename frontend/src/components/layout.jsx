@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import React from "react";
-import newLogo from "../assets/NEWlogo.svg";
 
+import { useEffect, useState } from "react";
+import api from "../axiosConfig";
+import newLogo from "../assets/newLogo.svg";
 const NAV = {
   staff: [
     {
@@ -54,9 +55,30 @@ export default function Layout({ children }) {
   const role = sessionStorage.getItem("role");
   const location = useLocation();
   const navigate = useNavigate();
+  const [showBranchSelector, setShowBranchSelector] = useState(false);
+const [branches, setBranches] = useState([]);
+const [selectedBranchId, setSelectedBranchId] = useState(
+  sessionStorage.getItem("active_branch_id") || ""
+);
+const [activeBranchName, setActiveBranchName] = useState(
+  sessionStorage.getItem("active_branch_name") || ""
+);
+const [isBranchWorkspace, setIsBranchWorkspace] = useState(
+  sessionStorage.getItem("is_branch_workspace") === "true"
+);
+const [showMobileMore, setShowMobileMore] = useState(false);
+const [branchError, setBranchError] = useState("");
 
   const navItems = [...(NAV[role] || []), TERM_OVER];
-  const bottomItems = navItems.slice(0, 5);
+  const bottomItems = isBranchWorkspace
+    ? [
+        { to: "/staff", label: "Dashboard", icon: NAV.staff[0].icon },
+        { to: "/create-loan", label: "New Loan", icon: NAV.staff[1].icon },
+        { to: "/search-loan", label: "Search", icon: NAV.staff[2].icon },
+      ]
+    : role === "owner"
+      ? NAV.owner.slice(0, 3)
+      : NAV.staff.slice(0, 3);
 
   const isActive = (to) => location.pathname === to;
 
@@ -64,6 +86,16 @@ export default function Layout({ children }) {
     sessionStorage.clear();
     navigate("/", { replace: true });
   };
+  useEffect(() => {
+  if (role !== "owner") return;
+
+  api.get("/api/branches")
+    .then((res) => setBranches(res.data))
+    .catch((err) => {
+      console.error("Failed to load branches:", err);
+      setBranchError("Unable to load branches. Please try again.");
+    });
+}, [role]);
 
   return (
     <>
@@ -309,6 +341,60 @@ export default function Layout({ children }) {
               </div>
             </div>
           </div>
+          
+{role === "owner" && (
+  <div
+    style={{
+      margin: "16px 16px 0",
+      padding: 14,
+      background: "#292929",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 10,
+    }}
+  >
+    <div
+      style={{
+        color: "#AAA",
+        fontSize: 11,
+        textTransform: "uppercase",
+        letterSpacing: 1,
+        marginBottom: 8,
+      }}
+    >
+      Working in branch
+    </div>
+
+    <div
+      style={{
+        color: "#FFF",
+        fontSize: 14,
+        fontWeight: 600,
+        marginBottom: 12,
+        overflowWrap: "anywhere",
+      }}
+    >
+      {activeBranchName || "No branch selected"}
+    </div>
+
+    <button
+      type="button"
+      className="ly-logout-btn"
+      style={{
+        padding: "9px 10px",
+        fontSize: 13,
+        color: "#FFF",
+        borderColor: "#8B0000",
+        background: "#8B0000",
+      }}
+      onClick={() => {
+        setBranchError("");
+        setShowBranchSelector(true);
+      }}
+    >
+      Switch Branch
+    </button>
+  </div>
+)}
 
           <nav className="ly-nav">
             <div className="ly-nav-section">Operations</div>
@@ -323,6 +409,7 @@ export default function Layout({ children }) {
               </Link>
             ))}
 
+
             <div className="ly-nav-section" style={{ marginTop: 16 }}>Monitoring</div>
             <Link
               to={TERM_OVER.to}
@@ -332,27 +419,125 @@ export default function Layout({ children }) {
               {TERM_OVER.label}
             </Link>
           </nav>
+            <div className="ly-sidebar-footer">
 
-          <div className="ly-sidebar-footer">
-            <button className="ly-logout-btn" onClick={handleLogout}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              Secure Sign Out
-            </button>
-          </div>
+              <button className="ly-logout-btn" onClick={handleLogout}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Secure Sign Out
+              </button>
+            </div>
         </aside>
 
         {/* Mobile Top Bar */}
+        
         <div className="ly-mobile-topbar">
           <div className="ly-brand">
-            <div className="ly-logo" style={{ width: 32, height: 32, padding: "2px", background: "transparent", boxShadow: "none" }}>
-              <img src={newLogo} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            <div
+              className="ly-logo"
+              style={{
+                width: 32,
+                height: 32,
+                padding: "2px",
+                background: "transparent",
+                boxShadow: "none",
+              }}
+            >
+              <img
+                src={newLogo}
+                alt="Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
             </div>
-            <span className="ly-brand-name" style={{ fontSize: 14 }}>L.B.A</span>
+
+            <span
+              className="ly-brand-name"
+              style={{ fontSize: 14 }}
+            >
+              L.B.A
+            </span>
           </div>
-          <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#888' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+
+          {role === "owner" && (
+            <button
+              type="button"
+              onClick={() => {
+                setBranchError("");
+                setShowBranchSelector(true);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                maxWidth: "48%",
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid #454545",
+                background: "#292929",
+                color: "#FFFFFF",
+                cursor: "pointer",
+                minWidth: 0,
+              }}
+            >
+              <span style={{ fontSize: 12 }}>Branch:</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {activeBranchName || "Select"}
+              </span>
+              <span>⌄</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Secure sign out"
+            style={{
+              background: "none",
+              border: "none",
+              color: "#FFFFFF",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
           </button>
         </div>
+
 
         {/* Main Content */}
         <div className="ly-main">
@@ -361,9 +546,57 @@ export default function Layout({ children }) {
             <span className="ly-topbar-role-badge">{role} Portal</span>
           </div>
 
-          <div className="ly-content">
-            {children}
-          </div>
+          
+<div className="ly-content">
+  {role === "owner" && location.pathname !== "/owner" && (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: 12,
+        padding: "12px 16px",
+        marginBottom: 20,
+        background: "#FFFFFF",
+        border: "1px solid #E5E7EB",
+        borderLeft: "4px solid #8B0000",
+        borderRadius: 8,
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 11, color: "#777", marginBottom: 4 }}>
+          CURRENT WORKING BRANCH
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#222" }}>
+          {activeBranchName || "No branch selected"}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setBranchError("");
+          setShowBranchSelector(true);
+        }}
+        style={{
+          border: "1px solid #8B0000",
+          borderRadius: 7,
+          padding: "8px 12px",
+          background: "#FFF",
+          color: "#8B0000",
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+      >
+        Switch Branch
+      </button>
+    </div>
+  )}
+
+  {children}
+</div>
+
         </div>
 
         {/* Mobile Bottom Nav */}
@@ -379,9 +612,187 @@ export default function Layout({ children }) {
                 <span>{item.label}</span>
               </Link>
             ))}
+
+            {isBranchWorkspace && (
+              <button
+                type="button"
+                className="ly-bottom-item"
+                onClick={() => setShowMobileMore((prev) => !prev)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                }}
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <circle cx="5" cy="12" r="1" />
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="19" cy="12" r="1" />
+                </svg>
+                <span>More</span>
+              </button>
+            )}
           </div>
         </nav>
+
+        {isBranchWorkspace && showMobileMore && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 75,
+              right: 12,
+              zIndex: 150,
+              width: 210,
+              padding: 8,
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              borderRadius: 12,
+              boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+            }}
+          >
+            {[
+              { label: "Analytics", to: "/staff-summary" },
+              { label: "Overdue Loans", to: "/term-over" },
+              { label: "Owner Overview", to: "/owner" },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setShowMobileMore(false)}
+                style={{
+                  display: "block",
+                  padding: "12px",
+                  color: "#222222",
+                  textDecoration: "none",
+                  borderRadius: 8,
+                }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
+      {role === "owner" && showBranchSelector && (
+  <div
+    role="presentation"
+    onClick={() => setShowBranchSelector(false)}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.55)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 200,
+      padding: 20,
+    }}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="branch-dialog-title"
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        background: "#FFF",
+        width: "100%",
+        maxWidth: 420,
+        borderRadius: 12,
+        padding: 24,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+      }}
+    >
+      <h2
+        id="branch-dialog-title"
+        style={{ fontSize: 20, marginBottom: 8, color: "#1A1A1A" }}
+      >
+        Switch Branch
+      </h2>
+
+      <p style={{ color: "#666", marginBottom: 20, fontSize: 14 }}>
+        Select the branch you want to work in.
+      </p>
+
+      {branchError && (
+        <p style={{ color: "#B91C1C", marginBottom: 12 }}>
+          {branchError}
+        </p>
+      )}
+
+      <select
+        value={selectedBranchId}
+        onChange={(e) => setSelectedBranchId(e.target.value)}
+        style={{
+          width: "100%",
+          padding: 12,
+          border: "1px solid #DDD",
+          borderRadius: 8,
+          marginBottom: 20,
+          fontSize: 15,
+        }}
+      >
+        <option value="">Choose a branch</option>
+        {branches.map((branch) => (
+          <option key={branch.id} value={branch.id}>
+            {branch.name}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          type="button"
+          className="ly-logout-btn"
+          style={{ color: "#555" }}
+          onClick={() => setShowBranchSelector(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="ly-logout-btn"
+          style={{
+            background: "#8B0000",
+            color: "#FFF",
+            borderColor: "#8B0000",
+          }}
+          onClick={() => {
+            const branch = branches.find(
+              (b) => String(b.id) === String(selectedBranchId)
+            );
+
+            if (!branch) {
+              setBranchError("Please select a valid branch.");
+              return;
+            }
+
+            sessionStorage.setItem("active_branch_id", String(branch.id));
+            sessionStorage.setItem("active_branch_name", branch.name);
+            setActiveBranchName(branch.name);
+            sessionStorage.setItem("is_branch_workspace", "true");
+            setIsBranchWorkspace(true);
+
+            setShowBranchSelector(false);
+
+            // Temporary: route to the staff workspace.
+            navigate("/staff");
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </>
   );
 }

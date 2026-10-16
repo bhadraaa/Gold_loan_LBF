@@ -242,14 +242,17 @@ function CreateLoan() {
             <label className="gl-label">Loan Date</label>
             <Flatpickr
               className="gl-input custom-big-calendar"
-              value={loanDate}
+              // Convert the YYYY-MM-DD string back to a Date object for the UI
+              value={loanDate ? new Date(loanDate) : null}
               onChange={([date]) => {
-                // Formats the date back to YYYY-MM-DD to match your state variable
-                const formattedDate = date.toISOString().split('T')[0];
-                setLoanDate(formattedDate);
+                if (date) {
+                  // Formats the date back to YYYY-MM-DD for your database state
+                  const formattedDate = date.toISOString().split('T')[0];
+                  setLoanDate(formattedDate);
+                }
               }}
               options={{
-                dateFormat: "d-m-Y", // Matches the DD-MM-YYYY format in your image
+                dateFormat: "d-m-Y", // Correctly displays as DD-MM-YYYY on the UI
               }}
             />
           </div>

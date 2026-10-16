@@ -1,6 +1,13 @@
+
 const express = require("express");
 const router = express.Router();
+
 const { authenticate } = require("../middleware/authMiddleware");
+
+const {
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+} = require("../middleware/branchAccessMiddleware");
 
 const {
   createLoan,
@@ -26,32 +33,166 @@ const {
   setGoldRate,
 } = require("../controllers/loanController");
 
-router.post("/create", authenticate, createLoan);
+// ========================================
+// OWNER REPORTS AND MANAGEMENT
+// ========================================
 
-// ✅ All specific routes first
-router.get("/owner/branch-summary", authenticate, branchSummary);
-router.get("/owner/report", authenticate, ownerDateReport);
-router.get("/owner/report/export", authenticate, exportDateReport);
-router.get("/owner/finance-summary", authenticate, financeSummary);
-router.get("/owner/summary", authenticate, ownerSummary);
-router.get("/owner/activity", authenticate, ownerActivityLogs);
-router.get("/owner/export/:branchId", authenticate, exportBranchLoans);
-router.post("/owner/set-gold-rate", authenticate, setGoldRate);
+router.get(
+  "/owner/branch-summary",
+  authenticate,
+  branchSummary
+);
 
-router.get("/staff/today-summary", authenticate, staffTodaySummary);
-router.get("/staff/date-summary", authenticate, staffDateSummary);
+router.get(
+  "/owner/report/export",
+  authenticate,
+  exportDateReport
+);
 
-router.get("/search", authenticate, searchLoans);
-router.get("/gold-rate", authenticate, getGoldRate);
-router.get("/term-over", authenticate, getTermOverLoans);
+router.get(
+  "/owner/report",
+  authenticate,
+  ownerDateReport
+);
 
-// ✅ Dynamic :id routes LAST
-router.get("/:id/renewed-loan", authenticate, getRenewedLoan);
-router.get("/:id", authenticate, getLoanById);
-router.post("/:id/payment", authenticate, addPayment);
-router.get("/:id/payments", authenticate, getLoanPayments);
-router.post("/:id/renew", authenticate, renewLoan);
-router.get("/:id/interest", authenticate, calculateInterest);
-router.post("/:id/topup", authenticate, addTopUp);
+router.get(
+  "/owner/finance-summary",
+  authenticate,
+  financeSummary
+);
+
+router.get(
+  "/owner/summary",
+  authenticate,
+  ownerSummary
+);
+
+router.get(
+  "/owner/activity",
+  authenticate,
+  ownerActivityLogs
+);
+
+router.get(
+  "/owner/export/:branchId",
+  authenticate,
+  exportBranchLoans
+);
+
+router.post(
+  "/owner/set-gold-rate",
+  authenticate,
+  setGoldRate
+);
+
+// ========================================
+// BRANCH-SPECIFIC OPERATIONS
+// Owner uses selected branch.
+// Staff uses assigned branch.
+// ========================================
+
+router.post(
+  "/create",
+  authenticate,
+  resolveActiveBranch,
+  createLoan
+);
+
+router.get(
+  "/staff/today-summary",
+  authenticate,
+  resolveActiveBranch,
+  staffTodaySummary
+);
+
+router.get(
+  "/staff/date-summary",
+  authenticate,
+  resolveActiveBranch,
+  staffDateSummary
+);
+
+router.get(
+  "/search",
+  authenticate,
+  resolveActiveBranch,
+  searchLoans
+);
+
+router.get(
+  "/term-over",
+  authenticate,
+  resolveActiveBranch,
+  getTermOverLoans
+);
+
+router.get(
+  "/gold-rate",
+  authenticate,
+  resolveActiveBranch,
+  getGoldRate
+);
+
+// ========================================
+// LOAN-SPECIFIC OPERATIONS
+// Validate that the loan belongs to the
+// active branch before accessing it.
+// ========================================
+
+router.get(
+  "/:id/renewed-loan",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  getRenewedLoan
+);
+
+router.get(
+  "/:id/payments",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  getLoanPayments
+);
+
+router.get(
+  "/:id/interest",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  calculateInterest
+);
+
+router.post(
+  "/:id/payment",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  addPayment
+);
+
+router.post(
+  "/:id/renew",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  renewLoan
+);
+
+router.post(
+  "/:id/topup",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  addTopUp
+);
+
+router.get(
+  "/:id",
+  authenticate,
+  resolveActiveBranch,
+  ensureLoanBranchAccess,
+  getLoanById
+);
 
 module.exports = router;

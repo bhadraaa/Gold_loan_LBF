@@ -3,6 +3,20 @@ import "../styles/gl.css";
 import api from "../axiosConfig";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(dateString) {
+  if (!dateString) return null;
+
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
 
 function OwnerDashboard() {
   const token = sessionStorage.getItem("token");
@@ -175,44 +189,34 @@ function OwnerDashboard() {
             <div className="gl-field" style={{ flex: 1, minWidth: 160 }}>
               <label className="gl-label">From Date</label>
               <Flatpickr
-                className="gl-input custom-big-calendar"
-                value={fromDate}
-                onChange={([selectedDate]) => {
-                  if (selectedDate) {
-                    const timezoneOffset = selectedDate.getTimezoneOffset() * 60000;
-                    const localDate = new Date(selectedDate.getTime() - timezoneOffset);
-                    const formattedString = localDate.toISOString().split("T")[0];
-                    setFromDate(formattedString);
-                  } else {
-                    setFromDate("");
-                  }
-                }}
-                options={{
-                  dateFormat: "d-m-Y",
-                  maxDate: toDate || undefined,
-                }}
-              />
+  value={fromDate ? parseLocalDate(fromDate) : null}
+  onChange={([selectedDate]) => {
+    setFromDate(
+      selectedDate ? formatLocalDate(selectedDate) : ""
+    );
+  }}
+  options={{
+    dateFormat: "d-m-Y",
+    maxDate: toDate ? parseLocalDate(toDate) : undefined,
+  }}
+/>
+
             </div>
             <div className="gl-field" style={{ flex: 1, minWidth: 160 }}>
               <label className="gl-label">To Date</label>
               <Flatpickr
-                className="gl-input custom-big-calendar"
-                value={toDate}
+                value={toDate ? parseLocalDate(toDate) : null}
                 onChange={([selectedDate]) => {
-                  if (selectedDate) {
-                    const timezoneOffset = selectedDate.getTimezoneOffset() * 60000;
-                    const localDate = new Date(selectedDate.getTime() - timezoneOffset);
-                    const formattedString = localDate.toISOString().split("T")[0];
-                    setToDate(formattedString);
-                  } else {
-                    setToDate("");
-                  }
+                  setToDate(
+                    selectedDate ? formatLocalDate(selectedDate) : ""
+                  );
                 }}
                 options={{
                   dateFormat: "d-m-Y",
-                  minDate: fromDate || undefined,
+                  minDate: fromDate ? parseLocalDate(fromDate) : undefined,
                 }}
               />
+
             </div>
             <button className="gl-btn" style={{ background: "var(--navy)", color: "#FFF" }} onClick={fetchReport}>
               Generate Report

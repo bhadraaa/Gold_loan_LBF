@@ -4,9 +4,11 @@ exports.closeLoan = async (req, res) => {
   try {
     const { loan_id, amount_paid } = req.body;
 
-    if (req.user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff can close loans" });
-    }
+    if (!["staff", "owner"].includes(req.user.role)) {
+  return res.status(403).json({
+    message: "Access denied"
+  });
+}
 
     await pool.query("BEGIN");
 
@@ -146,9 +148,9 @@ exports.partialPayment = async (req, res) => {
       return res.status(400).json({ message: "Invalid payment amount" });
     }
 
-    if (req.user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff can accept payments" });
-    }
+    if (!["staff", "owner"].includes(req.user.role)) {
+  return res.status(403).json({ message: "Access denied" });
+}
 
     await pool.query("BEGIN");
 

@@ -3,29 +3,42 @@ import "../styles/gl.css";
 import api from "../axiosConfig";
 import Flatpickr from "react-flatpickr";
 import "flatpickr/dist/flatpickr.css";
+import { useNavigate } from "react-router-dom";
 
 function StaffSummary() {
   const [data, setData] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const getLocalDateString = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const navigate = useNavigate();
+const today = getLocalDateString(new Date());
+
+const [fromDate, setFromDate] = useState(today);
+const [toDate, setToDate] = useState(today);
+
   const [loading, setLoading] = useState(true);
 
-  const fetchSummary = async (date) => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/api/loans/staff/date-summary?date=${date}`);
-      setData(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchSummary = async (from, to) => {
+  setLoading(true);
+
+  try {
+    const res = await api.get(
+      `/api/loans/staff/date-summary?from=${from}&to=${to}`
+    );
+    setData(res.data);
+  } catch (err) {
+    console.error("Failed to fetch staff summary:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
-    fetchSummary(selectedDate);
-  }, []);
+  fetchSummary(fromDate, toDate);
+}, []);
 
   if (!data && loading) return <div className="gl-loading"><span className="gl-spinner" />Loading summary...</div>;
   if (!data) return null;
@@ -44,35 +57,55 @@ function StaffSummary() {
         <div className="gl-header">
           <div>
             <div className="gl-title">Daily summary</div>
-            <div className="gl-subtitle">Financial breakdown for selected date</div>
+            <div className="gl-subtitle">Financial breakdown for selected dates</div>
           </div>
-          <div className="gl-search" style={{ width: 220 }}>
-           <Flatpickr
-            className="custom-big-calendar"
-            value={selectedDate}
-            onChange={([date]) => {
-              if (date) {
-                // Safely shifts the selected date to match your local timezone offset
-                const timezoneOffset = date.getTimezoneOffset() * 60000;
-                const localDate = new Date(date.getTime() - timezoneOffset);
-                
-                // Formats the raw timestamp object straight into an ISO "YYYY-MM-DD" string
-                const formattedString = localDate.toISOString().split("T")[0];
-                
-                // Fires both updates sequentially with the clean date string
-                setSelectedDate(formattedString);
-                fetchSummary(formattedString);
-              } else {
-                setSelectedDate("");
-              }
-            }}
-            options={{
-              dateFormat: "d-m-Y", // Displays layout format (DD-MM-YYYY) in the UI field
-            }}
-            // Maintained your inline layout sizing rules here:
-            style={{ width: "100%", padding: "8px 12px" }} 
-          />
-          </div>
+          <div
+  style={{
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+    alignItems: "flex-end",
+  }}
+>
+  <div className="gl-field">
+    <label className="gl-label">From Date</label>
+    <Flatpickr
+      className="gl-input custom-big-calendar"
+      value={fromDate ? new Date(`${fromDate}T12:00:00`) : null}
+      onChange={([date]) => {
+        if (!date) return;
+
+        const formatted = getLocalDateString(date);
+        setFromDate(formatted);
+        fetchSummary(formatted, toDate);
+      }}
+      options={{
+        dateFormat: "d-m-Y",
+        allowInput: false,
+      }}
+    />
+  </div>
+
+  <div className="gl-field">
+    <label className="gl-label">To Date</label>
+    <Flatpickr
+      className="gl-input custom-big-calendar"
+      value={toDate ? new Date(`${toDate}T12:00:00`) : null}
+      onChange={([date]) => {
+        if (!date) return;
+
+        const formatted = getLocalDateString(date);
+        setToDate(formatted);
+        fetchSummary(fromDate, formatted);
+      }}
+      options={{
+        dateFormat: "d-m-Y",
+        allowInput: false,
+        minDate: fromDate || undefined,
+      }}
+    />
+  </div>
+</div>
         </div>
 
         <div className="gl-card" style={{ marginBottom: 24 }}>
@@ -100,6 +133,7 @@ function StaffSummary() {
                     <th>Customer</th>
                     <th>Amount</th>
                     <th>Time</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,6 +146,15 @@ function StaffSummary() {
                         <td style={{ fontWeight: 500 }}>{loan.customer_name}</td>
                         <td style={{ fontVariantNumeric: "tabular-nums" }}>₹{Number(loan.loan_amount).toLocaleString("en-IN")}</td>
                         <td style={{ color: "var(--txt2)" }}>{new Date(loan.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="gl-btn gl-btn-outline gl-btn-sm"
+                            onClick={() => navigate(`/loan/${loan.id}`)}
+                          >
+                            View Details
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -132,6 +175,7 @@ function StaffSummary() {
                     <th>Amount</th>
                     <th>Interest / Principal</th>
                     <th>Time</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -146,6 +190,15 @@ function StaffSummary() {
                             ₹{Number(pay.interest_paid).toLocaleString("en-IN")} / ₹{Number(pay.principal_paid).toLocaleString("en-IN")}
                         </td>
                         <td style={{ color: "var(--txt2)" }}>{new Date(pay.payment_date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="gl-btn gl-btn-outline gl-btn-sm"
+                            onClick={() => navigate(`/loan/${pay.loan_id}`)}
+                          >
+                            View Details
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}

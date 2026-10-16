@@ -271,10 +271,7 @@ exports.createLoan = async (req, res) => {
       return res.status(400).json({ message: "At least one gold item required" });
     }
 
-    if (req.user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff can create loans" });
-    }
-
+   
     const loanAmount = Number(loan_amount);
 
     if (!Number.isFinite(loanAmount) || loanAmount <= 0) {
@@ -318,7 +315,7 @@ exports.createLoan = async (req, res) => {
       return res.status(400).json({ message: "Invalid gold weight" });
     }
 
-    const branch_id = req.user.branch_id;
+    const branch_id = req.activeBranchId;
     const created_by = req.user.id;
     const createdAt = loan_date ? new Date(loan_date) : new Date();
 
@@ -434,9 +431,14 @@ exports.searchLoans = async (req, res) => {
     `;
     const params = [`%${query}%`];
 
-    if (req.user.role === 'staff') {
-      sql += ` AND branch_id = $2`;
-      params.push(req.user.branch_id);
+    if (req.user.role === "staff" || req.user.role === "owner") {
+      sql += ` AND branch_id = $${params.length + 1}`;
+
+      params.push(
+        req.user.role === "staff"
+          ? req.user.branch_id
+          : req.activeBranchId
+      );
     }
 
     sql += ` ORDER BY created_at DESC`;
@@ -458,7 +460,12 @@ exports.getLoanById = async (req, res) => {
     const { id } = req.params;
 
     const loanResult = await pool.query(
-      "SELECT * FROM loans WHERE id = $1",
+      `SELECT
+        l.*,
+        b.name AS branch_name
+      FROM loans l
+      LEFT JOIN branches b ON b.id = l.branch_id
+      WHERE l.id = $1`,
       [id]
     );
 
@@ -469,9 +476,10 @@ exports.getLoanById = async (req, res) => {
     const loan = loanResult.rows[0];
 
     if (req.user.role === "staff" && loan.branch_id !== req.user.branch_id) {
-      return res.status(403).json({ message: "Access denied: Loan belongs to another branch." });
-    }
-
+  return res.status(403).json({
+    message: "Access denied: Loan belongs to another branch."
+  });
+}
     // =============================
     // Total Principal (Disbursements)
     // =============================
@@ -1118,11 +1126,16 @@ exports.financeSummary = async (req, res) => {
 
 exports.staffTodaySummary = async (req, res) => {
   try {
-    if (req.user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff allowed" });
-    }
+    if (!["staff", "owner"].includes(req.user.role)) {
+  return res.status(403).json({
+    message: "Access denied",
+  });
+}
 
-    const branchId = req.user.branch_id;
+    const branchId =
+  req.user.role === "staff"
+    ? req.user.branch_id
+    : req.activeBranchId;
 
     // Loans created today
     const loansToday = await pool.query(
@@ -1187,53 +1200,96 @@ exports.staffTodaySummary = async (req, res) => {
   }
 };
 
+
 exports.staffDateSummary = async (req, res) => {
   try {
-    if (req.user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff allowed" });
+    if (!["staff", "owner"].includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Access denied"
+      });
     }
 
-    const branchId = req.user.branch_id;
-    const { date } = req.query;
+    const branchId =
+  req.user.role === "staff"
+    ? req.user.branch_id
+    : req.activeBranchId;
+    const { from, to } = req.query;
 
-    const selectedDate = date || new Date().toISOString().split("T")[0];
+    // Default to today when dates are not supplied
+    const today = new Date();
+    const todayString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0")
+    ].join("-");
 
-    // Loans created on selected date
+    const fromDate = from || todayString;
+    const toDate = to || todayString;
+
+    // Validate date format
+    const isValidDate = (value) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) &&
+      new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+
+    if (!isValidDate(fromDate) || !isValidDate(toDate)) {
+      return res.status(400).json({
+        message: "Invalid date. Use YYYY-MM-DD format."
+      });
+    }
+
+    if (fromDate > toDate) {
+      return res.status(400).json({
+        message: "From date cannot be after To date."
+      });
+    }
+
+    // Loans created within the selected date range
     const loans = await pool.query(
       `SELECT id, loan_number, customer_name, loan_amount, created_at
        FROM loans
        WHERE branch_id = $1
-       AND DATE(created_at) = $2
+         AND created_at >= $2::date
+         AND created_at < ($3::date + INTERVAL '1 day')
        ORDER BY created_at DESC`,
-      [branchId, selectedDate]
+      [branchId, fromDate, toDate]
     );
 
-    // Payments on selected date
+    // Payments received within the selected date range
     const payments = await pool.query(
-      `SELECT p.amount_paid, p.interest_paid, p.principal_paid,
-              l.loan_number, p.payment_date
+      `SELECT
+         p.id,
+         p.amount_paid,
+         p.interest_paid,
+         p.principal_paid,
+         l.loan_number,
+         p.payment_date
        FROM payments p
        JOIN loans l ON p.loan_id = l.id
        WHERE l.branch_id = $1
-       AND DATE(p.payment_date) = $2
+         AND p.payment_date >= $2::date
+         AND p.payment_date < ($3::date + INTERVAL '1 day')
        ORDER BY p.payment_date DESC`,
-      [branchId, selectedDate]
+      [branchId, fromDate, toDate]
     );
 
+    // Financial totals for the same selected date range
     const totals = await pool.query(
-      `SELECT 
-        COALESCE(SUM(amount_paid),0) as total_collection,
-        COALESCE(SUM(interest_paid),0) as total_interest,
-        COALESCE(SUM(principal_paid),0) as total_principal
+      `SELECT
+         COALESCE(SUM(p.amount_paid), 0) AS total_collection,
+         COALESCE(SUM(p.interest_paid), 0) AS total_interest,
+         COALESCE(SUM(p.principal_paid), 0) AS total_principal
        FROM payments p
        JOIN loans l ON p.loan_id = l.id
        WHERE l.branch_id = $1
-       AND DATE(p.payment_date) = $2`,
-      [branchId, selectedDate]
+         AND p.payment_date >= $2::date
+         AND p.payment_date < ($3::date + INTERVAL '1 day')`,
+      [branchId, fromDate, toDate]
     );
 
     res.json({
-      date: selectedDate,
+      fromDate,
+      toDate,
       loans: loans.rows,
       payments: payments.rows,
       totalLoans: loans.rowCount,
@@ -1243,9 +1299,13 @@ exports.staffDateSummary = async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Staff Date Summary Error:", err);
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
+
 
 
 exports.ownerActivityLogs = async (req, res) => {

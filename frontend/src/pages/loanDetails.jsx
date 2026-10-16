@@ -380,17 +380,17 @@ function LoanDetails() {
               </div>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 500, color: "var(--txt1)" }}>{loan.customer_name}</div>
-                <div style={{ fontSize: 12, color: "var(--txt2)" }}>{loan.phone}</div>
+                <div style={{ fontSize: 16, color: "var(--txt2)" }}>{loan.phone}</div>
               </div>
             </div>
             <div className="gl-gap-8">
-              <div style={{ fontSize: 12, color: "var(--txt2)" }}>Address</div>
-              <div style={{ fontSize: 13, color: "var(--txt1)" }}>{loan.address}</div>
+              <div style={{ fontSize: 16, color: "var(--txt2)" }}>Address</div>
+              <div style={{ fontSize: 16, color: "var(--txt1)" }}>{loan.address}</div>
             </div>
           </div>
 
           <div className="gl-card">
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Gold items</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Gold items</div>
             <div className="gl-gap-8" style={{ marginBottom: 14 }}>
               {items.map((item, i) => (
                 <div key={i} className="gl-gold-item">
@@ -400,7 +400,7 @@ function LoanDetails() {
               ))}
             </div>
             <div style={{ background: "var(--gold-lt)", border: "0.5px solid var(--gold-border)", borderRadius: "var(--radius-xs)", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, color: "var(--gold-dk)" }}>Total weight</span>
+              <span style={{ fontSize: 16, color: "var(--gold-dk)" }}>Total weight</span>
               <span style={{ fontSize: 15, fontWeight: 600, color: "var(--gold-dk)", fontVariantNumeric: "tabular-nums" }}>{totalGoldWeight.toFixed(2)} g</span>
             </div>
           </div>
@@ -408,7 +408,7 @@ function LoanDetails() {
 
         {/* ── Financial summary ── */}
         <div className="gl-card" style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>Financial summary</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>Financial summary</div>
           {interestData ? (
             <>
               <div className={`gl-payable${isOverdue ? " overdue" : ""}`} style={{ marginBottom: 16 }}>
@@ -426,7 +426,7 @@ function LoanDetails() {
                 <div className="gl-kpi">
                   <div className="gl-kpi-label">Interest rate</div>
                   <div className="gl-kpi-value">{loan.interest_rate || 12}%</div>
-                  <div style={{ fontSize: 10, color: "var(--txt3)", marginTop: 2 }}>{loan.custom_interest_rate != null ? "Custom" : "Slab-based"}</div>
+                  <div style={{ fontSize: 16, color: "var(--txt3)", marginTop: 2 }}>{loan.custom_interest_rate != null ? "Custom" : "Slab-based"}</div>
                 </div>
                 <div className="gl-kpi">
                   <div className="gl-kpi-label">Days running</div>
@@ -453,7 +453,7 @@ function LoanDetails() {
 
         {/* ── Loan info ── */}
         <div className="gl-card" style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Loan info</div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 }}>Loan info</div>
           <div className="gl-detail-table">
             <div className="gl-row"><span className="gl-row-key">Loan no.</span><span className="gl-row-val" style={{ fontFamily: "var(--mono)", fontSize: 13 }}>{loan.loan_number}</span></div>
             <div className="gl-row"><span className="gl-row-key">Branch</span><span className="gl-row-val">{loan.branch || "BR1"}</span></div>
@@ -470,7 +470,7 @@ function LoanDetails() {
         ════════════════════════════════════════ */}
         {isActive && interestData && (
           <div className="gl-card" style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 20 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 20 }}>
               Actions
             </div>
 
@@ -760,7 +760,7 @@ function LoanDetails() {
 
         {/* ── Payment history ── */}
         <div className="gl-card" style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: "var(--txt2)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 16 }}>
             Payment history
           </div>
           {payments.length === 0 ? (

@@ -28,7 +28,7 @@ function App() {
       <Route
         path="/loan/:id"
         element={
-          <ProtectedRoute role="staff">
+          <ProtectedRoute role={["staff", "owner"]}>
             <Layout>
               <LoanDetails />
             </Layout>
@@ -40,18 +40,18 @@ function App() {
       <Route
         path="/staff"
         element={
-          <ProtectedRoute role="staff">
-            <Layout>
-              <StaffDashboard />
-            </Layout>
-          </ProtectedRoute>
+          <ProtectedRoute role={["staff", "owner"]}>
+          <Layout>
+            <StaffDashboard />
+          </Layout>
+        </ProtectedRoute>
         }
       />
 
       <Route
         path="/create-loan"
         element={
-          <ProtectedRoute role="staff">
+          <ProtectedRoute role={["staff", "owner"]}>
             <Layout>
               <CreateLoan />
             </Layout>
@@ -62,7 +62,7 @@ function App() {
       <Route
         path="/search-loan"
         element={
-          <ProtectedRoute role="staff">
+          <ProtectedRoute role={["staff", "owner"]}>
             <Layout>
               <SearchLoan />
             </Layout>
@@ -73,7 +73,7 @@ function App() {
       <Route
         path="/staff-summary"
         element={
-          <ProtectedRoute role="staff">
+          <ProtectedRoute role={["staff", "owner"]}>
             <Layout>
               <StaffSummary />
             </Layout>

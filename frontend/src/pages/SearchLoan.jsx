@@ -128,7 +128,7 @@ function SearchLoan() {
                     width: 40, height: 40, borderRadius: "50%",
                     background: "var(--navy)",
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13, fontWeight: 500, color: "#fff",
+                    fontSize: 16, fontWeight: 500, color: "#fff",
                     flexShrink: 0,
                   }}>
                     {loan.customer_name?.slice(0, 2).toUpperCase()}
@@ -138,7 +138,7 @@ function SearchLoan() {
                     <div style={{ fontSize: 14, fontWeight: 500, color: "var(--txt1)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {loan.customer_name}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--txt2)", marginTop: 1 }}>
+                    <div style={{ fontSize: 15, color: "var(--txt2)", marginTop: 1 }}>
                       {loan.loan_number}
                     </div>
                   </div>
