@@ -16,7 +16,7 @@ import SelectRole from "./pages/SelectRole";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout";
-
+import CashTransactions from "./pages/CashTransactions";
 
 function App() {
   return (
@@ -121,6 +121,16 @@ function App() {
           <ProtectedRoute role={["staff", "owner"]}>
             <Layout>
               <TermOverLoans />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cash-transactions"
+        element={
+          <ProtectedRoute role={["staff", "owner"]}>
+            <Layout>
+              <CashTransactions />
             </Layout>
           </ProtectedRoute>
         }

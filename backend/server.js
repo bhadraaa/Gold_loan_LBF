@@ -9,7 +9,7 @@ app.use(express.json());
 
 const helmet = require("helmet");
 app.use(helmet());
-
+const cashTransactionRoutes = require("./routes/cashTransactionRoutes");
 // ✅ Routes FIRST
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api", require("./routes/branchRoutes"));
@@ -17,6 +17,7 @@ app.use("/api/loans", require("./routes/loanRoutes"));
 app.use("/api/payments", require("./routes/paymentRoutes"));
 app.use("/api/owner", require("./routes/ownerRoutes"));
 app.use("/api/settings", require("./routes/settingsRoutes"));
+app.use("/api/cash-transactions", cashTransactionRoutes);
 
 const cron = require("node-cron");
 const { exec } = require("child_process");

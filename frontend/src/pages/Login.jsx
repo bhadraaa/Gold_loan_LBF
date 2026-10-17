@@ -91,7 +91,7 @@ const LockIcon = () => (
   </svg>
 );
 const BackArrow = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+  <svg width="20" height="20" viewBox="0 0 14 14" fill="none">
     <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
@@ -373,8 +373,8 @@ export default function Login() {
     /* Back button */
     .lr-back {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 17px; font-weight: 500;
-      color: #999;
+      font-size: 24px; font-weight: 800;
+      color: #000;
       background: none; border: none;
       cursor: pointer; padding: 0;
       margin-bottom: 36px;
@@ -672,7 +672,7 @@ export default function Login() {
           {/* Footer */}
           <div className="lr-footer">
             <LockIcon />
-            256-bit encrypted · Secure session
+            
           </div>
         </div>
 
@@ -792,7 +792,7 @@ export default function Login() {
             {/* Secure note */}
             <div className="lr-secure">
               <LockIcon />
-              Secured with 256-bit encryption
+              
             </div>
 
           </div>

@@ -152,7 +152,7 @@ export default function Splash() {
             <div className="splash-dot" />
           </div>
         </div>
-        <div className="splash-version">SECURED PORTAL v1.0.0</div>
+        
       </div>
     </>
   );

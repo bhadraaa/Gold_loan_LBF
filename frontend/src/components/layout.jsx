@@ -25,6 +25,26 @@ const NAV = {
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
       )
     },
+    {
+      to: "/cash-transactions",
+      label: "Cash Transactions",
+      icon: (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2" y="6" width="20" height="12" rx="2" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M6 10h.01M18 14h.01" />
+        </svg>
+      ),
+    },
   ],
   owner: [
     {
@@ -41,6 +61,26 @@ const NAV = {
       to: "/gold-rate-settings", label: "Gold Rate", icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
       )
+    },
+    {
+      to: "/cash-transactions",
+      label: "Cash Transactions",
+      icon: (
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2" y="6" width="20" height="12" rx="2" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M6 10h.01M18 14h.01" />
+        </svg>
+      ),
     },
   ],
 };
@@ -113,15 +153,18 @@ const [branchError, setBranchError] = useState("");
 
         /* ══ SIDEBAR (Desktop) ══ */
         .ly-sidebar {
-          width: 250px;
+          width: 270px;
           flex-shrink: 0;
-          background: #1A1A1A; /* Deep Charcoal */
+          background: linear-gradient(180deg, #171717 0%, #222020 100%);
           display: flex;
           flex-direction: column;
           position: fixed;
-          top: 0; left: 0; bottom: 0;
+          top: 0;
+          left: 0;
+          bottom: 0;
           z-index: 50;
-          border-right: 1px solid rgba(255,255,255,0.05);
+          border-right: 1px solid #3A3030;
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
         }
 
         .ly-sidebar-top {
@@ -161,19 +204,19 @@ const [branchError, setBranchError] = useState("");
 
         .ly-nav {
           flex: 1;
-          padding: 24px 16px;
+          padding: 22px 14px;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .ly-nav-section {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
-          color: #555;
+          color: #9CA3AF;
           text-transform: uppercase;
-          letter-spacing: 1px;
-          padding: 12px 12px 6px;
+          letter-spacing: 1.4px;
+          padding: 14px 12px 8px;
         }
 
         .ly-nav-link {
@@ -200,8 +243,15 @@ const [branchError, setBranchError] = useState("");
           box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
         }
 
-        .ly-nav-link.term-over { color: #FF6B6B; }
-        .ly-nav-link.term-over.active { background: #D32F2F; }
+        .ly-nav-link.term-over {
+          color: #FCA5A5;
+        }
+
+        .ly-nav-link.term-over.active {
+          background: #451A1A;
+          color: #FFFFFF;
+          border-color: #B91C1C;
+        }
 
         .ly-sidebar-footer {
           padding: 20px;
@@ -231,16 +281,17 @@ const [branchError, setBranchError] = useState("");
 
         /* ══ MAIN CONTENT ══ */
         .ly-main {
-          margin-left: 250px;
+          margin-left: 270px;
           flex: 1;
           display: flex;
           flex-direction: column;
         }
 
+        
         .ly-topbar {
-          background: #FFF;
-          border-bottom: 1px solid #EEE;
-          padding: 16px 32px;
+          background: #FFFFFF;
+          border-bottom: 1px solid #E5DADA;
+          padding: 18px 32px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -251,19 +302,21 @@ const [branchError, setBranchError] = useState("");
 
         .ly-topbar-title {
           font-family: 'Playfair Display', serif;
-          font-size: 18px;
-          color: #1A1A1A;
+          font-size: 22px;
+          color: #292020;
         }
 
         .ly-topbar-role-badge {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
-          padding: 6px 14px;
-          border-radius: 4px;
-          background: #F0F0F0;
+          padding: 8px 14px;
+          border: 1px solid #E7C4C7;
+          border-radius: 8px;
+          background: #FFF5F5;
           color: #8B0000;
           text-transform: uppercase;
         }
+
 
         .ly-content {
           flex: 1;
@@ -304,16 +357,22 @@ const [branchError, setBranchError] = useState("");
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 4px;
+          gap: 5px;
           text-decoration: none;
-          color: #999;
-          font-size: 18px;
+          color: #777777;
+          font-size: 16px;
           font-weight: 600;
-          transition: 0.2s;
+          transition: all 0.2s ease;
         }
 
         .ly-bottom-item.active {
           color: #8B0000;
+          background: #FFF5F5;
+        }
+        .ly-bottom-item svg {
+          width: 25px;
+          height: 25px;
+          flex-shrink: 0;
         }
 
         @media (max-width: 768px) {

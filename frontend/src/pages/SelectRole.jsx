@@ -263,7 +263,7 @@ export default function SelectRole() {
               <rect x="2" y="5" width="8" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
               <path d="M4 5V3.5a2 2 0 014 0V5" stroke="currentColor" strokeWidth="1.2" />
             </svg>
-            Secure Branch Management System
+           
           </div>
 
         </div>
